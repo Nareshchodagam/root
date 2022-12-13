@@ -1,0 +1,11 @@
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Verify serial number Gus vs Host 
+- release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/serial_check.py -c" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Change iDB Status to DECOM
+Exec: /opt/rh/python27/root/usr/bin/python2.7 /opt/cpt/bin/decomm_idb.py -H v_HOSTS -o u
+
+- System shutdown
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/sbin/shutdown -h now" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"

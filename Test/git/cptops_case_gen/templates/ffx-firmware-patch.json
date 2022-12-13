@@ -1,0 +1,39 @@
+{
+	"Details":
+	{
+	"RecordTypeId": "012B000000009fB",
+	"Change-Type": "Standard Pre Approved",
+	"Status": "Approved, Scheduled",
+	"SRO-Resource": "No",
+	"Patch-Vendor": "Other",
+	"Patch-Desc": "Upgrade of firmwares on HP hardware",
+	"Subject": "v_SUBJECT",
+	"Description": "Need to keep host firmware current",
+	"Implementation": "See Implementation Plan Attached",
+	"Verification": "", 
+	"Priority": "Sev3",
+	"Change-Area": "Systems - Patch/Upgrade Redundant Systems",
+	"Business-Justification": "Hosts need to updated to the latest revision for compliance and security reasons",
+	"Business-Reason": "Routine Maintenance",
+	"Cloud-Team": "a3mB000000000BhIAI",
+	"Backout": "This is a fix forward rollback",
+	"Shared-Infrastructure": "Yes",
+	"Tested-Change": "Yes",
+	"Risk-Level": "Low",
+	"Risk-Summary:Test Details": "Has been tested in the IST environment",
+	"Impact-Severity": "Low",
+	"Impact-Scope": "Host/Node",
+	"Impact-Summary": "Low impact due to validations within ORB framework",
+	"Functional-System-Area": "Servers",
+	"Infrastructure-Type": "'Supporting Infrastructure'",
+	"Test-Evidence": "'Test Detail & Results Included (see Risk Summary)'",
+	"Vendor-Case-Number": ""
+	},
+	"Verif": [ "Run the following command after the reboot: : ",
+				" ", 
+				"$ hpacucli ctrl all show config",
+				" ",
+				"Ensure Firmware 6.64 is running"
+				
+				]
+}

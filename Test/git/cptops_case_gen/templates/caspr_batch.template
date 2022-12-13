@@ -1,0 +1,11 @@
+- Create batch file. 
+Exec_with_creds: /opt/cpt/bin/create_batch.py -H v_HOSTS -d v_DATACENTER --file v_CASE_batch.list
+
+- Exec gigantor workflow
+Exec_with_creds: /usr/lib/gigantor/bin/kp_client start_batch --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --name AFW_CASPR_Basic_Reimage --concurrency v_GSIZE --failure_threshold v_FAILTHRESH --datacenter v_DATACENTER --superpod v_SUPERPOD --cluster v_CLUSTER --arguments MONITORHOST=v_MONITOR OS_TYPE=CentOS OS_VERSION_MAJOR=7 OS_VERSION_MINOR=2 POST_HOSTBUILD_COMMAND="/usr/local/libexec/system_update.sh -a v_BUNDLE" FINAL_HOST_STATE_IDB=ACTIVE INVENTORY_ACTION_SCRIPT_PATH="/home/sfdc/current/dca-inventory-action/dca-inventory-action/inventory-action.pl" IB_USER=admin IB_PASSWORD=`python /opt/cpt/bin/get_ib_passwd.py` RELEASEHOST=${HOSTNAME} --file ~/v_CASE_batch.list
+
+- Check job execution status
+Exec_with_creds: /usr/lib/gigantor/bin/kp_client executions --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --state running --name AFW_CASPR_Basic_Reimage --started 10m+
+
+- Check if batch execution is finished in Firefox window. 
+Manual: check if batch job is finished. 

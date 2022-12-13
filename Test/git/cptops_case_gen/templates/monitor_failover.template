@@ -1,0 +1,11 @@
+-RR based commands
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Execute the nagios_failover.py script from the Standby node. 
+Manual: Execute ~/releaserunner/remote_transfer/nagios_failover.py script from v_HOSTS
+
+-Enable notifications process on Nagios standby
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable --hostlevel
+
+Exec: echo "Host v_HOSTS system patching completed"

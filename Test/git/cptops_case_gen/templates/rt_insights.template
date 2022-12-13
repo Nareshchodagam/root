@@ -1,0 +1,10 @@
+- Create batch file.
+Exec_with_creds: /opt/cpt/bin/create_batch.py -H v_HOSTS -d v_DATACENTER --file v_CASE_batch.list
+
+Exec_with_creds: /usr/lib/gigantor/bin/kp_client start_batch --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --name AFW_Racktastic_Basic_Reimage --concurrency v_GSIZE --failure_threshold v_FAILTHRESH --datacenter v_DATACENTER --superpod v_SUPERPOD --cluster v_CLUSTER --arguments MONITORHOST=v_MONITOR OS_NAME=centos7u2 POST_REIMAGE_COMMAND="/usr/local/libexec/system_update.sh -a v_BUNDLE" PRESERVE="true" DISK_CONFIG="highcapdata" INVENTORY_ACTION_SCRIPT_PATH="/home/sfdc/current/dca-inventory-action/dca-inventory-action/inventory-action.pl" RELEASEHOST=${HOSTNAME} --file ~/v_CASE_batch.list
+
+- Check job execution status
+Exec_with_creds: /usr/lib/gigantor/bin/kp_client executions --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --state running --name AFW_Racktastic_Basic_Reimage --started 10m+
+
+- Check if job is completed.
+Manual: Check job.

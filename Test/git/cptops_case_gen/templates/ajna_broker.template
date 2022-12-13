@@ -1,0 +1,53 @@
+RR based commands
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -auto2 -threads -property "sudo_cmd_line_trunk_fix=1"
+
+- Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Write patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py -l --case v_CASE --host v_HOSTS
+
+- Check for RPMDB and YUM Lock
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/rpmdb_check.sh" -threads -auto2
+
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Stop kafka
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_service.py -n ajna-kafka -i -k" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+v_INCLUDE
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -auto2 -threads -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Pause for a minute to allow the broker to join the cluster and start replicating data
+Exec: sleep 200
+
+- Validate service
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_service.py -n ajna-kafka -a" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Underrep Sync Check (number returned by amiunderrep func has to be 0 to continue)
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product mandm-kafka -device_role v_ROLE -host v_HOSTS -c cmd -m "source ajnarc; amiunderrep | grep -qw 0" -auto2 -threads
+
+- Enable GOC++ alerts ("disable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+Exec: echo "Host v_HOSTS system patching completed"
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y

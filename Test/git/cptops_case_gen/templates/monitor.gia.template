@@ -1,0 +1,30 @@
+RR based commands
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Disable monitoring on appropriate pod-monitor host
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable
+
+-Disable monitoring on apprporiate ops-monitor host
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable -m ops-monitor-v_DATACENTER
+
+-Update host to RHEL6u6
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/system_update.sh -a v_BUNDLE -p" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Check the host is online
+Exec: ~/check_reconnect.py -H v_HOSTS
+
+-Validate the host has been patched
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Enable monitoring on appropriate pod-monitor host
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable -m ops-monitor-v_DATACENTER
+
+-Enable monitoring on apprporiate ops-monitor host
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable

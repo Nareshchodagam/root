@@ -1,0 +1,6 @@
+- Cooling period (5 days)
+
+- Delete host from iDB
+Exec: /opt/rh/python27/root/usr/bin/python2.7 /opt/cpt/bin/decomm_idb.py -H v_HOSTS -o d
+
+- Continue with 'Part B' step

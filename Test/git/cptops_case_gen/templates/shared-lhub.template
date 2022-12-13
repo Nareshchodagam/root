@@ -1,0 +1,83 @@
+-RR based commands
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable -m v_CLUSTER-monitor-v_DATACENTER
+
+
+
+
+-stop and disable vsftpd and httpd
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service vsftpd status" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service httpd status" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service vsftpd stop" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "chkconfig vsftpd off" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service httpd stop" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "chkconfig httpd off" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-save storage storage config
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/save_storage_config.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-backup root crontab
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "crontab -l > ~/cronroot.bck" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-remove root crontab
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "crontab -r" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-kill processes accessing /hub 
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "pkill -f '/hub/'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-check for open files 
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "[ $(lsof | grep '/hub/' | wc -l) -eq 0 ]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-unmount fs
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/umountall.sh '/hub/'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-check for open files 
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "[ $(mount | grep '/hub/' | wc -l) -eq 0 ]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+Manual: Contact SANENG resource to shut down fc ports for v_HOSTS
+
+- Execute the update script
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/system_update.sh -a v_BUNDLE -p" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+Manual: Contact SANENG resource to start fc ports v_HOSTS
+
+-restore storage config
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/restore_storage_config.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-mount fs
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "mount -a" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-check for open files 
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "[ $(mount | grep '/hub/' | wc -l) -gt 0 ]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-restore root crontab
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "crontab ~/cronroot.bck" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-start vsftpd
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service vsftpd start" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-start httpd
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service httpd start" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable -m v_CLUSTER-monitor-v_DATACENTER
+
+Exec: echo "Host v_HOSTS system patching completed"
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y

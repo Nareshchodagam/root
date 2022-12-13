@@ -1,0 +1,14 @@
+{
+	"DCs": "v_DATACENTER",
+	"Details":
+	{
+		"SM_Instance_List__c": "v_INSTANCES",
+		"SM_Infrastructure_Type__c": "Primary"
+	},
+	"Implementation_Steps": [ 
+								"See attached implementation plan: plan_implementation.txt",
+								"",
+								"The verification plan is contained with in code executed during the",
+								"implementation plan"
+							]
+ }

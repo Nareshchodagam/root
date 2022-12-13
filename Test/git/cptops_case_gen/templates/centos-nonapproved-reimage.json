@@ -1,0 +1,42 @@
+{
+	"Details":
+	{
+	"RecordTypeId": "012B000000009fB",
+	"Change-Type": "Minor",
+	"Status": "New",
+	"SRO-Resource": "No",
+	"Subject": "v_SUBJECT",
+	"Description": "Re-Image hosts to Centos as part of project Blackhawk",
+	"Implementation": "See Implementation Plan Attached",
+	"Verification": "", 
+	"Priority": "Sev3",
+	"Change-Area": "Systems - Re-imaging commodity servers",
+	"Business-Justification": "Hosts need to migrated off RedHat for project Blackhawk",
+	"Business-Reason": "Project Work",
+	"Cloud-Team": "a3mB000000000BhIAI",
+	"Backout": "Re-image host to current RHEL levels",
+	"Shared-Infrastructure": "Yes",
+	"Tested-Change": "Yes",
+	"Risk-Level": "Low",
+	"Risk-Summary:Test Details": "Standard re-image workflow being applied",
+	"Impact-Severity": "Low",
+	"Impact-Scope": "Host/Node",
+	"Impact-Summary": "Low impact due to validations within ORB framework",
+	"Functional-System-Area": "Servers",
+	"Infrastructure-Type": "Supporting Infrastructure",
+	"Test-Evidence": "'Test Detail & Results Included (see Risk Summary)'",
+	"Vendor-Case-Number": ""
+	},
+	"Verif": [ "Ensure Host has been rebooted and its uptime is less then 300: ",
+				" ", 
+				"$ cat /proc/uptime | awk '{print $1}'",
+				" ",
+				"Confirm /etc/centos-release exists:", 
+				" ", 
+				"$ file /etc/centos-release", 
+				" ",
+				"All checks will be included in the validation code ",
+				"validate_linux_patchset.py"
+				
+				]
+}

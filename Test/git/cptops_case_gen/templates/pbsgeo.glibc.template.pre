@@ -1,0 +1,14 @@
+- set your DC env
+Exec: DC=v_DATACENTER
+
+- create a local remote_transfer directory
+Exec: mkdir -p ~/releaserunner/remote_transfer
+
+- pull necessary utility scripts
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/nagios_monitor.py ~/nagios_monitor.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/check_reconnect.py ~/check_reconnect.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/validate_linux_patchset.py ~/releaserunner/remote_transfer/validate_linux_patchset.py
+Exec: cp /opt/cpt/bin/validate_firmware.py ~/releaserunner/remote_transfer/validate_firmware.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/jumpstart/common/solaris-and-linux/sysfiles/system_update.sh ~/releaserunner/remote_transfer/system_update.sh
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/valid_versions.json ~/releaserunner/remote_transfer/valid_versions.json
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/verify_hosts.py ~/verify_hosts.py

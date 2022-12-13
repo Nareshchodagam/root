@@ -1,0 +1,29 @@
+#! /bin/bash
+USAGE="
+	./dva_expect 2016.05 2016.05-patch.json '\"2016.05 Patch Bundle: \"' CMS './dva_create_cases.sh'
+	./dva_expect 2016.05 2016.05-patch.json '\"2016.05 Patch Bundle: \"' 6u6-plan.json './dva_create_canary_cases.sh'
+"
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]
+then
+   echo "$USAGE"
+   exit 
+fi
+BUNDLE=$1
+PATCHJSON=$2
+PREAMBLE=$3 #eg "FEB and GLIBC Patch Bundle : "
+MISCL=$4 # one of signoff team / implementation plan json
+SCRIPT=$5
+echo "Enter Gus Password:"
+stty -echo
+read PASS
+stty echo
+
+PASS=$(echo $PASS | sed -E 's/([#$%&_\])/\\&/g' )
+expect - <<EOF 
+set timeout -1
+spawn $SCRIPT $BUNDLE $PATCHJSON $PREAMBLE $MISCL
+expect password: {
+	send "$PASS\r"
+	exp_continue
+}
+EOF

@@ -1,0 +1,49 @@
+{
+  "_comment" : "All these options can be overwritten using command line option parsing.",
+  "GUS": {
+    "username": "dsn@gus.com",
+    "client_secret": "516830729068743801",
+    "client_id": "3MVG92.uWdyphVj6UxPnhEXcGWJ0S1x3YjODc6tr26PrGYmtAtX8xXFxSGkMqF2H9cF6xfv6AZe9MDfzd1BF9",
+    "api_ver": "v40.0"
+  },
+  "LOGIN": {
+    "oauthURL": "https://gus.salesforce.com/services/oauth2/token"
+  },
+  "COOLAN": {
+    "_comment" : "Empty below field if you dont have a coolan account.",
+    "coolan_id": "<User's_Coolan_id>"
+  },
+  "VAULT": {
+    "vault_name": ""
+  },
+  "IRC": {
+    "channel": "#sr",
+    "alias": "dsn_"
+  },
+    "SLACK": {
+    "channel": "#sr",
+    "url": "https://hooks.slack.com/services/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",
+    "alias": "Amar_"
+  },
+  "BLACKSWAN_VAULT": {
+    "vault_name": "blackswan"
+  },
+  "WAVE": {
+    "_commentApp" : "appName = your app name, if emply users Wave Private App will be used.|(leave blank for defaul) ",
+    "_commentDatasetName": "datasetName = Dataset name must be unique acsross organization.|(leave blank for defaul)",
+    "_commentDatasetLable": "datasetLable = Dataset Lable usuallay a display name, need not to be unique.|(leave blank for defaul)",
+    "appName": "",
+    "datasetName": "amar_json",
+    "datasetLable": "amar-json"
+  },
+  "CASES": {
+    "_commentdc" : "dc = india|us|gia|all|(leave blank for defaul)",
+    "_cmmentprodDR" : "prodDR = dr|prod|(leave blank for defaul)",
+    "_commentbundle" : "bundle = 2018.0317 | if left blank, need to provide via command line using -bundle option",
+    "_commentstatus" : "status = in|app|new|(leave blank for defaul report section)",
+    "dc" : "us",
+    "prodDr": "prod",
+    "bundle": "2018.0815",
+    "status" : "app"
+  }
+}

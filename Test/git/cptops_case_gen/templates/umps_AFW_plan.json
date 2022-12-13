@@ -1,0 +1,32 @@
+{
+	"DCs": "",
+	"Details":
+	{
+		"SM_Instance_List__c": "na41",
+		"SM_Infrastructure_Type__c": "Primary"
+	},
+	"Implementation_Steps": [
+	                            "- Pre-Step:- DHCP edit to move the hosts to Razor group",
+                                "- Disable the monitoring with Nagios helper",
+                                "- Summary of conversion steps:",
+	                              " - Login to Gigantor GUI - https://gig-kingpin1-0-<dc>.data.sfdc.net/kingpin",
+								  " - Search for AFW_Razor_RPSApps_PuppetConversion",
+								  " - Enter DC and cluster name.",
+								  " - For RR options",
+	  							  " - if you have selected dstore and msg servers then",
+	                              " - invdb_mode -cluster <CLUSTERNAME> -superpod <SUPERPOD> -manifests chatternow__184_patch__10155905.rmf,chatternow-secure__prod__9361967.rmf,sfdc-splunk-forwarder__patch__9913674.rmf -nostart -no_monitor",
+	  							  " - if you have selected prsn and chan servers then",
+	                              " - invdb_mode -cluster <CLUSTERNAME> -superpod <SUPERPOD> -manifests chatternow__184_patch__10246735.rmf,chatterbox__1_freeze__10105205.rmf,sfdc-splunk-forwarder__patch__9913674.rmf -nostart -no_monitor",
+	                              " - if you have selected sshare servers then",
+	                              " - invdb_mode -cluster <CLUSTERNAME> -superpod <SUPERPOD> -manifests -manifests chatterbox__1_freeze__9545208.rmf,sfdc-splunk-forwarder__patch__9913674.rmf -nostart -no_monitor",
+                                  " - Click Submit",
+								  " - Ensure all G1 hosts are back online and code deployed.",
+	                              " - Execute the workflow 'AFW_Razor_Basic_RebootWithPuppetRun' to update the servers with 6u6",
+	                              " - Set sudo command option to",
+                                  " - yum update -y --disablerepo=* --enablerepo=sfdc-redhat6* -c http://ops-inst1-1-DC/media/yum/prod/afw-updates/yumrepos/DC-6u6-update.repo",
+                                  " - Set RR flag -no_monitor",
+                                  " - Click Submit",
+                                  " - Start the service in order dstore-msg-prsn,chan,sshare with attached impl plan",
+                                  " - Enable the monitoring from Nagios helper/nagios_monitor.py"
+							]
+ }

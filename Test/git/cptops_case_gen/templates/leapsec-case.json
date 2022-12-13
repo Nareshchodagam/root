@@ -1,0 +1,38 @@
+{
+	"Details":
+	{
+	"RecordTypeId": "012B000000009fB",
+	"Change-Type": "Standard Pre Approved",
+	"Status": "Approved, Scheduled",
+	"SRO-Resource": "No",
+	"Patch-Vendor": "Redhat",
+	"Patch-Desc": "RHEA-2015 0913-1 Upgrades of tzdata for leap second",
+	"Subject": "v_SUBJECT",
+	"Description": "For SFDC Compliance, we need to upgrade the below hosts",
+	"Implementation": "Not used",
+	"Verification": "", 
+	"Priority": "Sev3",
+	"Change-Area": "Systems - Patch/Upgrade Redundant Systems",
+	"Business-Justification": "Hosts need to updated to the latest revision for compliance and security reasons",
+	"Business-Reason": "Routine Maintenance",
+	"Cloud-Team": "Compute Deploy",
+	"Backout": "This is a fix forward rollback",
+	"Shared-Infrastructure": "Yes",
+	"Tested-Change": "Yes",
+	"Risk-Level": "Low",
+	"Risk-Summary": "Test Details: Has been tested in the IST environment",
+	"Impact-Severity": "Low",
+	"Impact-Scope": "Host/Node",
+	"Impact-Summary": "Low impact due to validations within ORB framework",
+	"Functional-System-Area": "Servers",
+	"Infrastructure-Type": "'Primary & Secondary'",
+	"Test-Evidence": "'Test Detail & Results Included (see Risk Summary)'",
+	"Vendor-Case-Number": ""
+	},
+	"Verif": [ "Ensure Host has been updated to at least tzdata-2015c: ",
+				" ", 
+				"The end of the output from each run of update_tzdata.sh will validate success",
+				" "
+				
+				]
+}

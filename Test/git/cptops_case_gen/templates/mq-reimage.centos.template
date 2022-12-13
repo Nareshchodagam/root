@@ -1,0 +1,9 @@
+- get version numbers for apps
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder,mq-broker -c versioncheck -threads -auto2 -host v_HOSTS > /tmp/version_output.txt
+
+Exec: python ~/get_versions.py -f /tmp/version_output.txt -o ~/manifests.txt -a mq-broker,sfdc-splunk-forwarder
+
+Exec: cat ~/manifests.txt
+
+- Exec gigantor workflow
+Exec: /usr/lib/gigantor/bin/kp_client start --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --name AFW_Razor_RPSApps_Reimage --arguments CLUSTER=v_CLUSTER DATACENTER=v_DATACENTER HOST=v_HOSTS MONITORHOST=v_MONITOR.ops.sfdc.net OS_TYPE=CentOS OS_VERSION_MAJOR=6 OS_VERSION_MINOR=7 POST_REIMAGE_COMMAND="/usr/local/libexec/system_update.sh -a v_BUNDLE -p" RR_RPS_DEPLOY_OPTIONS="`cat ~/manifests.txt`" SUPERPOD=v_SUPERPOD SERIAL_NUMBER=v_SERIAL PRESERVE=true IB_USER=admin IB_PASSWORD=`python ~/get_ib_passwd.py` INVENTORY_ACTION_SCRIPT_PATH="/home/sfdc/current/dca-inventory-action/dca-inventory-action/inventory-action.pl" --release_host=ops-orch1-1-v_DATACENTER.ops.sfdc.net 

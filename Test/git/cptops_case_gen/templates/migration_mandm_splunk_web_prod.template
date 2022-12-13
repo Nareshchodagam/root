@@ -1,0 +1,48 @@
+-RR based commands
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Performing racreset on the hosts
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "ipmitool mc reset cold" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check for artifact errors
+Exec: yum clean all;yum repolist|grep -i error;echo $? |grep 1
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Stop the running application
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - logsearch_1 -c './service stop'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service httpd status" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service httpd stop" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the iDB status of the hosts to IN_MAINTENANCE
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do inventory-action.pl -use_krb_auth -action update  -resource host -name $host -updateFields "operationalStatus=IN_MAINTENANCE";done>> ~/v_CASE_idb_log.txt
+
+- Begin Migration block
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do serial=$(inventory-action.pl -use_krb_auth -action read  -resource host -name $host |grep -i serialNumber|cut -d'"' -f4);echo "/usr/lib/gigantor/bin/caspr_host_reimage.sh -c  v_CLUSTER  -d v_ROLE  -h $host -i admin  -o CentOS -v 7 -n $serial -s v_SUPERPOD -m ops-monitor-crz.ops.sfdc.net"; done
+
+Manual: Reimage through Caspr
+
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do inventory-action.pl -use_krb_auth -action update  -resource host -name $host -updateFields "operationalStatus=ACTIVE";done>> ~/v_CASE_idb_log.txt
+
+- NTP stop & start
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "systemctl stop ntpd"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpdate && sleep 5" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "hwclock --systohc" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpd" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start the application
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - logsearch_1 -c './service start'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service httpd start" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service httpd status" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y
+
+Exec: echo "Host v_HOSTS system patching completed"

@@ -1,0 +1,54 @@
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H public-cmsdb1-1-v_DATACENTER,public-cmsdb2-1-v_DATACENTER,v_HOSTS -c disable
+
+-Validate web hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod NONE -cluster WEB -product web-sfdc -c bigipcheck -host v_HOSTS -auto2 -threads -d -cluster_status v_CL_OPSTAT
+
+- remove web hosts from pool
+release_runner.pl -invdb_mode -superpod NONE -cluster WEB -product web-sfdc -property "min_f5_percentage=0" -c remove_from_pool -host v_HOSTS -auto2 -threads -cluster_status v_CL_OPSTAT
+
+-stop all web apps
+release_runner.pl -invdb_mode -superpod NONE -cluster WEB -product web-sfdc -c stop_server -host v_HOSTS -auto2 -threads -cluster_status v_CL_OPSTAT
+
+- Stop Splunk
+release_runner.pl -invdb_mode -superpod NONE -cluster WEB -product sfdc-splunk-forwarder -c stop_server -host v_HOSTS -auto2 -threads -cluster_status v_CL_OPSTAT
+
+- stop DBs
+Manual: Engage DBEng to bring the databases down on public-cmsdb1-1-v_DATACENTER and public-cmsdb2-1-v_DATACENTER
+
+
+v_INCLUDE
+ 
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- start DBs
+Manual: Engage DBEng to bring the databases up on public-cmsdb1-1-v_DATACENTER and public-cmsdb2-1-v_DATACENTER
+
+-start all apps on web hosts
+release_runner.pl -invdb_mode -superpod NONE -cluster WEB -product web-sfdc -c start_server -host v_HOSTS -auto2 -threads -cluster_status v_CL_OPSTAT
+
+- Start Splunk
+release_runner.pl -invdb_mode -superpod NONE -cluster WEB -product sfdc-splunk-forwarder -c start_server -host v_HOSTS -auto2 -threads -cluster_status v_CL_OPSTAT
+
+- add web hosts to pool
+release_runner.pl -invdb_mode -superpod NONE -cluster WEB -product web-sfdc -c add_to_pool -host v_HOSTS -auto2 -threads -cluster_status v_CL_OPSTAT
+
+-Validate web hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod NONE -cluster WEB -product web-sfdc -c bigipcheck -host v_HOSTS -auto2 -threads -d -cluster_status v_CL_OPSTAT
+
+-enable monitoring on appropriate monitor host for web hosts
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H public-cmsdb1-1-v_DATACENTER,public-cmsdb2-1-v_DATACENTER,v_HOSTS -c enable

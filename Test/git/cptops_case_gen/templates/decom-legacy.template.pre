@@ -1,0 +1,9 @@
+- create a local remote_transfer directory
+Exec: mkdir -p ~/releaserunner/remote_transfer
+
+- Get the remote scripts:
+- Make sure to copy serial_check.txt into ~/releaserunner/remote_transfer
+Exec: cp -R /opt/cpt/remote/* ~/releaserunner/remote_transfer/
+
+- Disable nagios
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable 

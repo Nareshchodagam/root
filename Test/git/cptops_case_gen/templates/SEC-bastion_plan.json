@@ -1,0 +1,14 @@
+{
+	"DCs": "v_DATACENTER",
+	"Details":
+	{
+		"SM_Infrastructure_Type__c": "Supporting Infrastructure"
+	},
+	"Implementation_Steps": [ 
+								"Connect to ops-bastion hosts and run: svn export svn://vc-""v_DATACENTER""/subversion/tools/automation/scripts/syssec/patch/sec_system_update.sh",
+								"",
+								"run:",
+								"sudo ./sec_system_update.sh",
+								"reboot the host"
+							]
+ }

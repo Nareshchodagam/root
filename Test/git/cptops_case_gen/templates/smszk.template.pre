@@ -1,0 +1,8 @@
+- create a local remote_transfer directory
+Exec: mkdir -p ~/releaserunner/remote_transfer
+
+- get the remote scripts:
+Exec: cp -R /opt/cpt/remote/* ~/releaserunner/remote_transfer/
+
+- Find leader and rebuild hostlist.
+Exec: /opt/cpt/remote/zookeeper_status.py -c v_CASE -H v_HOSTS --byleader

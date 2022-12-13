@@ -1,0 +1,9 @@
+Exec: echo "Patching completed"
+
+- Update cluster config in idb
+Exec: /opt/cpt/bin/update_patching_status.py --cluster v_CLUSTER
+
+
+- To regenerate this Implementation Plan use the following command.
+
+- v_COMMAND

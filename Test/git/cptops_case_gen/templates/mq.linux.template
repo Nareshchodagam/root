@@ -1,0 +1,54 @@
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Write patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py -l --case v_CASE --host v_HOSTS
+
+- Check for RPMDB and YUM Lock
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/rpmdb_check.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2  -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Check the health of the brokers in the pod
+Exec_with_creds: /opt/cpt/bin/verify_check.py -H v_HOSTS
+
+- Stop the running application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product mq-broker -host v_HOSTS -c stop_server -auto2 -threads
+
+v_INCLUDE
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check the host is online
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start the application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product mq-broker -host v_HOSTS -c start_server -auto2 -threads
+
+- Sleep for 300 seconds
+Exec: sleep 300
+
+- Enable GOC++ alerts ("disable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+- Patchset completed comment
+Exec: echo "host v_HOSTS systems patching completed"
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y
+

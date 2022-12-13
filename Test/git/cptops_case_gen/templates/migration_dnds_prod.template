@@ -1,0 +1,139 @@
+
+
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Writing CNC info to v_CASE_hostinfo file
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a cncinfo
+
+- Check the console
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a routecheck
+
+- Check for artifact errors
+Exec: yum clean all;yum repolist|grep -i error;echo $? |grep 1
+
+- Disable monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Begin Hbase pre migration steps
+
+- Check if the iDB centosMigrationInProgress flag is true
+Exec: /opt/cpt/bin/update_patching_status.py --cluster v_CLUSTER --migration
+
+- Cluster Validation
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads  -auto2 -c cmd -m "python /home/sfdc/bigdops/cluster_validator/gatekeeper.py -s -c" -host v_CLUSTER-mnds1-1-v_DATACENTER
+
+- Cluster backup validation
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads  -dc v_DATACENTER -no_irc  -auto2 -c cmd -m "grep com.salesforce.hbase.metrics.CounterMetrics.SOR.status /home/sfdc/logs/hbase/daily_cross_cluster_backup_validation.log|tail -1|awk -F'):' '{print \$2}' | python -c \"import sys, json; print json.load(sys.stdin)['value']\" | grep 0" -host v_CLUSTER-mnds5-1-v_DATACENTER
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads  -dc v_DATACENTER -no_irc  -auto2 -c cmd -m "if [ \`sed -n \"/-----------------------------------------------------/,/-----------------------------------------------------/p\" /home/sfdc/logs/hbase/daily_backup.log | grep -i Failed | wc -l\` -eq 0 ]; then echo 0; else echo 1; fi | grep 0" -host v_CLUSTER-mnds1-1-v_DATACENTER,v_CLUSTER-mnds2-1-v_DATACENTER,v_CLUSTER-mnds3-1-v_DATACENTER
+
+- Remove host from cluster
+Exec_with_creds: /usr/local/bin/ambari-manage/decom_ambari_host.py  --hostname v_HOSTS --case v_CASE
+
+- Refresh kerberos ticket
+Exec_with_creds: /usr/local/bin/ambari-manage/interactive-kinit.py
+
+- Copying ketabs to mnds hosts
+Exec_with_creds: /usr/local/bin/ambari-manage/between_hbasehost_copy.py -m v_CLUSTER-mnds5-1-v_DATACENTER -d v_HOSTS -s /home/sfdc/.keytab/*.keytab
+Exec_with_creds: /usr/local/bin/ambari-manage/between_hbasehost_copy.py -m v_CLUSTER-mnds5-1-v_DATACENTER -d v_HOSTS -s /home/sfdc/.keytab/krb5.conf
+Exec_with_creds: /usr/local/bin/ambari-manage/between_hbasehost_copy.py -m v_CLUSTER-mnds3-1-v_DATACENTER -d v_HOSTS -s /home/sfdc/.keytab/*.keytab
+Exec_with_creds: /usr/local/bin/ambari-manage/between_hbasehost_copy.py -m v_CLUSTER-mnds3-1-v_DATACENTER -d v_HOSTS -s /home/sfdc/.keytab/krb5.conf
+Exec_with_creds: /usr/local/bin/ambari-manage/between_hbasehost_copy.py -m v_CLUSTER-mnds4-1-v_DATACENTER -d v_HOSTS -s /home/sfdc/.keytab/*.keytab
+Exec_with_creds: /usr/local/bin/ambari-manage/between_hbasehost_copy.py -m v_CLUSTER-mnds4-1-v_DATACENTER -d v_HOSTS -s /home/sfdc/.keytab/krb5.conf
+
+
+- Cluster Validation
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads  -auto2 -c cmd -m "python /home/sfdc/bigdops/cluster_validator/gatekeeper.py -c" -host v_CLUSTER-mnds1-1-v_DATACENTER
+
+- End Hbase pre migration steps
+
+- Begin Migration block
+
+- Set the iDB status of the hosts to IN_MAINTENANCE
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status IN_MAINTENANCE
+
+- Reset the dell console
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -r -v" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Install HP raid utils on required CNC's
+release_runner.pl -forced_host $(cat ~/v_CASE_cnc) -c sudo_cmd -m "yum install hp-raid-utilities -y " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Installing Vanilla Image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a image --role v_ROLE --disk_config stage1hdfs
+
+- Checking for awaiting_deployment status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous image
+
+- Check for iDB hardware_provisioning status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a idb_check --status HW_PROVISIONING
+
+- Removing IDB records of the hosts
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a erasehostname
+
+- Deploying App specific image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a deploy --role v_ROLE --cluster v_CLUSTER --superpod v_SUPERPOD
+
+Exec: echo 'Waiting for status change to deployed'
+
+- Checking for deployed status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous deploy
+
+Exec: echo 'Waiting for puppet run to complete and iDB status change to PROVISIONING' && sleep 1200
+
+- Refresh kerberos ticket
+Exec_with_creds: /usr/local/bin/ambari-manage/interactive-kinit.py
+
+- Update IDB status of the hosts to Active
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status ACTIVE
+
+- END Migration block
+
+- Removing known hosts file
+Exec: rm -rf  ~/.ssh/known_hosts
+
+- NTP stop & start
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl stop ntpd"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpdate && sleep 5" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "hwclock --systohc" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpd" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m " yum install sfdc-python27-PyYAML -y" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+Exec: sleep 30
+
+- puppet run
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "puppet agent -t; if [ \$? -eq 2 ]; then echo 0; fi|grep 0" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- verify data mount points
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "df -h |grep data-[0,1,2,3] |wc -l |grep 4" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Refresh kerberos ticket
+Exec_with_creds: /usr/local/bin/ambari-manage/interactive-kinit.py
+
+- Restore the keytabs
+Exec_with_creds: /usr/local/bin/ambari-manage/between_hbasehost_copy.py -m v_CLUSTER-mnds5-1-v_DATACENTER -d v_HOSTS -o
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads -dc v_DATACENTER -no_irc -auto2 -c cmd -m "if [ ! -d /home/sfdc/.keytab ]; then mkdir -p /home/sfdc/.keytab; echo 0; fi| grep 0" -host v_HOSTS
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads -dc v_DATACENTER -no_irc -auto2 -c cmd -m "x=\`hostname -s\`; if [ \`ls -l /tmp/\$x |grep keytab|wc -l\` -gt 1 ]; then chmod 775 /home/sfdc/.keytab; cp -p /tmp/\`hostname -s\`/* /home/sfdc/.keytab/; chown -R sfdc:sfdc /home/sfdc/.keytab; echo 0; fi | grep 0" -host v_HOSTS
+
+- Enable Host and start service
+Exec_with_creds: /usr/local/bin/ambari-manage/add_ambari_host.py --comment "CE7 Migration" --hostname v_HOSTS --case v_CASE
+
+- perforce bigdata package install and refresh configs
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads  -dc v_DATACENTER -no_irc  -auto2 -c cmd -m "if [ ! -d /home/sfdc/current ]; then mkdir -p /home/sfdc/current; fi" -host v_HOSTS
+
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-tephra,bigdata-kerberos,bigdata-hbase,bigdata-migration,bigdata-otsdb,bigdata-util,bigdata-hbase-coprocessors,bigdata-conf,bigdata-hbase-sor,bigdata-hadoop,bigdata-apps,bigdata-hbase-monitoring,bigdata-zookeeper,bigdata-idb-conf,bigdata-spark,bigdata-schema -threads -no_lb -no-recheck_on_fail -no_monitor -auto2 -stage runtime -nostart -c install -manifests bigdata-tephra__hbase.9_prod__18127207.rmf,bigdata-kerberos__hbase.10_prod__25846844.rmf,bigdata-hbase__hbase.10_prod__21472576.rmf,bigdata-migration__hbase.10_prod__24531633.rmf,bigdata-otsdb__hbase.10_prod__21472576.rmf,bigdata-util__hbase.10_prod__24462814.rmf,bigdata-hbase-coprocessors__hbase.10_prod__21471015.rmf,bigdata-conf__hbase.10_prod__28259738.rmf,bigdata-hbase-sor__hbase.10_prod__21471015.rmf,bigdata-hadoop__hbase.10_prod__21471015.rmf,bigdata-apps__hbase.10_prod__21776932.rmf,bigdata-hbase-monitoring__hbase.10_prod__21776932.rmf,bigdata-zookeeper__hbase.10_prod__21471015.rmf,bigdata-idb-conf__hbase.10_prod__21471015.rmf,bigdata-spark__hbase.9_prod__18127207.rmf,bigdata-schema__hbase.10_prod__24462814.rmf -host v_HOSTS
+
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads  -dc v_DATACENTER -no_irc  -auto2 -c cmd -m "~/current/bigdata-util/util/build/ant --build_props_override ~/current/bigdata-util/util/build/ambari.properties  -- cluster refreshConfigs  -c disable -s enable  -e ZookeeperController,HadoopController,JournalController,HBaseController" -host v_HOSTS
+
+- Enable GOC++ alerts ("disable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y

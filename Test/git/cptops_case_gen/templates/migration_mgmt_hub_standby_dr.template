@@ -1,0 +1,92 @@
+
+
+- To verify if site is PROD
+Exec_with_creds: /opt/cpt/bin/check_prod.py -i v_CLUSTER -l secondary
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- get version numbers for apps
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product v_PRODUCT_RRCMD -c versioncheck -dostandby -threads -auto2 -host $(cat ~/v_CASE_include ) > ~/v_CLUSTER-v_ROLE-v_CASE_version_output.txt
+
+- Extract app versions from output data.
+Exec: /opt/cpt/bin/get_versions.py -f ~/v_CLUSTER-v_ROLE-v_CASE_version_output.txt -o ~/v_CLUSTER-v_ROLE-v_CASE_manifests.txt --versions
+
+- Writing CNC info to v_CASE_hostinfo file
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a cncinfo
+
+- Check the console connectivity
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a routecheck
+
+- Check for artifact errors
+Exec: yum clean all;yum repolist|grep -i error;echo $? |grep 1
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+
+- Set the iDB status of the hosts to IN_MAINTENANCE
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status IN_MAINTENANCE
+
+- Begin Migration block
+
+- Reset the dell console
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -r -v" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Install HP raid utils on required CNC's
+release_runner.pl -forced_host $(cat ~/v_CASE_cnc) -c sudo_cmd -m "yum install hp-raid-utilities -y " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Installing Vanilla Image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a image --role v_ROLE
+
+- Checking for awaiting_deployment status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous image
+
+- Check for iDB hardware_provisioning status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a idb_check --status HW_PROVISIONING
+
+- Removing IDB records of the hosts
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a erasehostname
+
+- Deploying App specific image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a deploy --role v_ROLE --cluster v_CLUSTER --superpod v_SUPERPOD
+
+Exec: echo 'Waiting for status change to deployed'
+
+- Checking for deployed status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous deploy
+
+Exec: echo 'Waiting for puppet run to complete and iDB status change to PROVISIONING' && sleep 1200
+
+- Refresh kerberos ticket
+Exec: kinit -R
+
+- Update IDB status of the hosts to Active
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status ACTIVE
+
+- END Migration block
+
+- Removing known hosts file
+Exec: rm -rf  ~/.ssh/known_hosts
+
+- Validate that the hosts have been migrated to CE7
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "uname -r |grep el7" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- NTP stop & start
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl stop ntpd"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpdate && sleep 5" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "hwclock --systohc" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpd" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Deploy apps
+release_runner.pl -invdb_mode -dc v_DATACENTER -superpod v_SUPERPOD -cluster v_CLUSTER -host v_HOSTS -dostandby -c deploy -threads  -no_db_data_init  -auto2 -versions `cat ~/v_CLUSTER-v_ROLE-v_CASE_manifests.txt` -nostart
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y
+

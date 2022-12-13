@@ -1,0 +1,11 @@
+- Check for RPMDB and YUM Lock
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/rpmdb_check.sh" -threads -auto2 -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Update vendortools.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/system_vendortools_update.sh -a v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Update host to latest bundle
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/local/libexec/system_postbuild.py -a" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Enable Retpoline on Server
+release_runner.pl --forced_host v_HOSTS -c sudo_cmd -m "touch /var/lib/puppet/ENABLE_SPECTRE_V2" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"

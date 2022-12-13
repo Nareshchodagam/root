@@ -1,0 +1,12 @@
+Description: |
+  is a new POD. 
+  Arrays: HDS G800 40693_40707-phx_040586_40587-dfw 
+  Hosts na39-db1-[1-8]-[phx,dfw] / Hosts na39-dgdb1-[1-2]-[phx,dfw] 
+  Stgmgt: ops0-stgmgt[1,2]-1-[phx,dfw] 
+  Storage: 
+  GRIDDG_DB: 0500:0503 # 4GB = 4 x 1GB 
+  ORAHOME_DB: 0100:0107 # 320GB = 8 x 60GB (8 nodes) 
+  ARCHDG_DB: 0200:0210 # 4.0TB = 17 x 240GB 
+  FLASHDG_DB: 0211:0232 # 8.1TB = 34 x 240GB 
+  REDODG_DB: 0233:0237 # 1.2TB = 5 x 240GB 
+  DATADG_DB: 0238:0363 # 72 TB = 300 x 240GB ## This leaves about 8TB unallocated for requirement changes in REDO,ARCH,FLASH and DATA DGs

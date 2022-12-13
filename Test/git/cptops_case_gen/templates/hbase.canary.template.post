@@ -1,0 +1,16 @@
+- Added as per W-5190509
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads -auto2 -c cmd -m "hostname |grep -i stg1hdaas-mnds ;if [ \$? -eq 0 ];then ~/current/bigdata-util/util/build/ant backup sanityValidation; else : ;fi " -host $(cat ~/v_CASE_include|awk -F ',' '{print $1}')
+
+- BigData data management validation
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads -auto2 -c cmd -m "hostname |grep -i stg1hdaas-mnds ;if [ \$? -eq 0 ];then /home/sfdc/current/bigdata-util/util/prodScripts/startBigDataMigrationValidation.sh; else : ;fi " -host $(cat ~/v_CASE_include)
+
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -device_roles mnds -threads  -auto2 -c cmd -m "~/current/bigdata-util/util/build/ant validation validate single"
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-kerberos -device_roles mnds -threads  -auto2 -c cmd -m "~/current/bigdata-kerberos/kerberos/build/ant -- -w krb validate"
+
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -device_roles mnds,dnds -threads -auto2 -c cmd -m "cd ~/current/bigdata-hbase-monitoring/hbase-monitoring/signoff; ./run_service_maturity_validation.sh $v_CLUSTER /home/sfdc/current/bigdata-hbase/hbase/hbase /home/sfdc/current/bigdata-hbase-monitoring/hbase-monitoring/"
+
+Exec: echo "Patching completed"
+
+- To regenerate this Implementation Plan use the following command.
+
+- v_COMMAND

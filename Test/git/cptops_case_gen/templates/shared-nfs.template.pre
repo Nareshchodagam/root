@@ -1,0 +1,50 @@
+- set your DC env
+Exec: DC=v_DATACENTER
+
+- create a local remote_transfer directory
+Exec: mkdir -p ~/releaserunner/remote_transfer
+
+- the get the remote scripts:
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/sharednfs/client_remount.sh ~/releaserunner/remote_transfer/client_remount.sh
+Exec: svn export svn://vc-v_DATACENTER/subversion/jumpstart/common/solaris-and-linux/sysfiles/system_update.sh ~/releaserunner/remote_transfer/system_update.sh
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/valid_versions.json ~/releaserunner/remote_transfer/valid_versions.json
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/sharednfs/killrpc_restartnfs.sh ~/releaserunner/remote_transfer/killrpc_restartnfs.sh
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/validate_patchset.py ~/releaserunner/remote_transfer/validate_patchset.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/check_mounts_siteaware.py ~/releaserunner/remote_transfer/check_mounts_siteaware.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/system_vendortools_update.sh ~/releaserunner/remote_transfer/system_vendortools_update.sh
+
+- then get the local update scripts:
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/idbhelper.py ~/idbhelper.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/check_reconnect.py ~/check_reconnect.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/genSummary.py ~/genSummary.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/texttable.py ~/texttable.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/nagios_monitor.py ~/nagios_monitor.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/sharednfs/client_mount_status.sh ~/client_mount_status.sh
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/sharednfs/remountlist.sh ~/remountlist.sh
+
+
+#####
+
+We check the cluster multiple times to ensure we're not starting work if anything is out of place. This means running zpool pool and kinit commands repeatedly.
+
+#####
+
+-kerberos
+Exec: kinit
+
+
+
+True up df -h / vfstab and share / dfstab:
+i) /etc/vfstab entries should reflect df -h: add / comment out entries as needed
+ii) /etc/dfs/dfstab should reflect share : add /comment out entries as needed
+
+Exec: ~/genSummary.py -H v_LISTOFHOSTS -c dfh,vfstab
+Manual: Validate above is ok
+Exec: ~/genSummary.py -H v_LISTOFHOSTS -c share,dfstab
+Manual: Validate above is ok
+Exec: ~/genSummary.py -H v_LISTOFHOSTS -c zpool_status
+Manual: Validate above is ok
+Exec: ~/genSummary.py -H v_LISTOFHOSTS -c netstat_nfs
+Manual: Validate above is ok
+
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/verify_hosts.py ~/verify_hosts.py

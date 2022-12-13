@@ -1,0 +1,59 @@
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Write patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py -l --case v_CASE --host v_HOSTS
+
+- Check for RPMDB and YUM Lock
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/rpmdb_check.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Check for buddy jenkins server
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - build -c 'ssh -o StrictHostKeyChecking=no build@v_OHOSTS hostname;if [ \$? -ne 0 ]; then exit 1 ; fi'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Stop Jenkins server.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - build -c './stop_jenkins.sh'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Record http status.
+release_runner.pl --forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_service.py -n httpd -r -i " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+v_INCLUDE
+
+- Check for Buddy Jenkins App
+
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "curl https://v_OHOSTS.eng.sfdc.net:8443/  --insecure 2>&1 > /dev/null" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check for Buddy Jenkins App
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "curl https://v_OHOSTS.eng.sfdc.net:8443/  --insecure 2>&1 > /dev/null" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start http service.
+release_runner.pl --forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_service.py -n httpd -i -s " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Enable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y
+
+Exec: echo "Host v_HOSTS system patching completed"

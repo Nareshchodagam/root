@@ -1,0 +1,66 @@
+
+RR based commands
+
+- copy it up to the target host
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+-set boot device
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2  -property "sudo_cmd_line_trunk_fix=1"
+
+-Validate hosts are in pool and no issues with the pool
+#release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product pbspectrum -c bigipcheck -thread -auto2 -status provisioning
+
+-disable monitoring on appropriate monitor host
+#Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable
+
+- remove from pool
+- If RR command fails, to remove from pool manually, login into the big ip and disable form within the pool
+#release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product pbspectrum -host v_HOSTS -c remove_from_pool -auto2 -status provisioning
+
+-stop app
+#release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - sfdc -c '/home/sfdc/current/pbspectrum/pbspectrum/build/ant -q stop'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+#release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product pbspectrum,sfdc-splunk-forwarder -host v_HOSTS -c stop_server -auto2 -status provisioning
+
+- stop splunk
+#release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - appmon -c 'source .p4include;/home/appmon/current/sfdc-splunk-forwarder/splunk/build/ant stop'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Execute the  update script:
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/system_update.sh -a v_BUNDLE -p" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check the host is online
+Exec: ~/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_rh.py -k 2.6.32-504.12.2.el6.x86_64 -r 6.6 -b 300 -u" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+-start app (pbspectrum takes several minutes to start up)
+#release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product pbspectrum,sfdc-splunk-forwarder -host v_HOSTS -c start_server -auto2 -status provisioning
+
+#release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - sfdc -c '/home/sfdc/current/pbspectrum/pbspectrum/build/ant -q start'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- validate app is up.
+#release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "ps aux|grep pbs|grep -v grep" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+#Manual: Validate that pbs geo process is running above.
+
+- start splunk
+#release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - appmon -c 'source .p4include;/home/appmon/current/sfdc-splunk-forwarder/splunk/build/ant start'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- add to pool
+#release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product pbspectrum -host v_HOSTS -c add_to_pool -threads -auto2 -status provisioning
+
+-enable monitoring on appropriate monitor host
+#Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable
+
+-Validate hosts are in pool and no issues with the pool
+#release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product pbspectrum -c bigipcheck -d -threads -auto2
+
+- test endpoint connectivity.
+#release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m 'curl localhost:8080/validateDeployment.jsp' -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+Exec: echo "Host v_HOSTS systems patching completed"

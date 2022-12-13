@@ -1,0 +1,6 @@
+
+- Update vendortools.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/system_vendortools_update.sh -a v_BUNDLE" -threads -auto2 -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Execute the update script
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/system_update.sh -a v_BUNDLE" -threads -auto2 -auto2 -property "sudo_cmd_line_trunk_fix=1"

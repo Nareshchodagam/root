@@ -1,0 +1,14 @@
+{
+  "DCs": "v_DATACENTER",
+  "Details":
+  {
+    "SM_Instance_List__c": "",
+    "SM_Infrastructure_Type__c": "Supporting Infrastructure"
+  },
+  "Implementation_Steps": [
+    "Connect to ops-release hosts and run: katzmeow.pl --case <00000000> --impl",
+    "",
+    "The verification plan is contained with in code executed during the",
+    "implementation plan"
+  ]
+}

@@ -1,0 +1,13 @@
+- create a local remote_transfer directory
+Exec: mkdir -p ~/releaserunner/remote_transfer
+
+- Get the remote scripts:
+Exec: cp /opt/cpt/bin/system_update.sh ~/releaserunner/remote_transfer/system_update.sh
+Exec: cp /opt/cpt/includes/valid_versions.json ~/releaserunner/remote_transfer/valid_versions.json
+Exec: cp /opt/cpt/bin/validate_linux_patchset.py ~/releaserunner/remote_transfer/validate_linux_patchset.py
+Exec: cp /opt/cpt/bin/validate_firmware.py ~/releaserunner/remote_transfer/validate_firmware.py
+Exec: cp /opt/cpt/bin/manage_bootdevice.py ~/releaserunner/remote_transfer/manage_bootdevice.py
+Exec: cp /opt/cpt//bin/chk_symlinks.py ~/releaserunner/remote_transfer/chk_symlinks.py
+Exec: cp /opt/cpt/bin/manage_service.py ~/releaserunner/remote_transfer/manage_service.py
+Exec: cp /opt/cpt/bin/zookeeper_status.py ~/releaserunner/remote_transfer/zookeeper_status.py
+Exec: cp /opt/cpt/bin/system_vendortools_update.sh ~/releaserunner/remote_transfer/system_vendortools_update.sh

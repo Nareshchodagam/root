@@ -1,0 +1,44 @@
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the iDB password to the latest otherwise we might get some errors
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/ib-passwd-rotation.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- get version numbers for apps
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product v_PRODUCT_RRCMD -c versioncheck -threads -auto2 -host v_HOSTS > ~/version_output.txt
+
+- Extract app versions from output data.
+Exec: /opt/cpt/bin/get_versions.py -f ~/version_output.txt -o ~/manifests.txt --versions
+
+Exec: cat ~/manifests.txt
+
+- Set the Label
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/insights_disklabel.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Validate hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product insights-redis,insights-edgeservices,waveagent,wave-connector-agent,wave-cassandra -c bigipcheck -bigipstatus AVAILABILITY_STATUS_GREEN -host v_HOSTS -threads -auto2
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable
+
+- Remove from pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product insights-redis,insights-edgeservices,waveagent,wave-connector-agent,wave-cassandra -host v_HOSTS -c remove_from_pool -threads -auto2
+
+- Stop the running application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product v_PRODUCT_RRCMD -host v_HOSTS -c stop_server -stopall -threads -auto2 -host_status v_HO_OPSTAT
+
+v_INCLUDE
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Deploy apps
+release_runner.pl -invdb_mode -versions `cat ~/manifests.txt` -superpod v_SUPERPOD -cluster v_CLUSTER -host v_HOSTS -auto2 -threads -c deploy -versions `cat ~/manifests.txt`
+
+- Validate hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product insights-redis,insights-edgeservices,waveagent,wave-connector-agent,wave-cassandra -c bigipcheck -bigipstatus AVAILABILITY_STATUS_GREEN -host v_HOSTS -threads -auto2
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable

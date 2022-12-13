@@ -1,0 +1,58 @@
+- kinit for zshrc workaround
+Exec: kinit
+
+- workaround for zshrc
+Exec: for i in $(echo public-webproddb1-1-v_DATACENTER,public-webproddb2-1-v_DATACENTER,public-webstgdb1-1-v_DATACENTER,public-webapp2-1-v_DATACENTER,v_HOSTS | sed 's/,/ /g'); do ssh -o StrictHostKeyChecking=no ${i} "touch .zshrc" 2>/dev/null; done
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host public-webproddb1-1-v_DATACENTER,public-webproddb2-1-v_DATACENTER,public-webstgdb1-1-v_DATACENTER,public-webapp2-1-v_DATACENTER,v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H public-webproddb1-1-v_DATACENTER,public-webstgdb1-1-v_DATACENTER,public-webproddb2-1-v_DATACENTER,v_HOSTS -c disable -m ops-monitor-v_DATACENTER
+
+-Validate web hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product web-stage -property "domain_override=ops.sfdc.net" -c bigipcheck -auto2 -threads -d
+
+- remove web hosts from pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product web-stage -property "domain_override=ops.sfdc.net"  -c remove_from_pool -auto2 -threads
+
+-stop all web apps
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product web-stage -property "domain_override=ops.sfdc.net"  -c stop_server -auto2 -threads
+
+- Stop Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -property "domain_override=ops.sfdc.net"  -c stop_server -auto2 -threads
+
+- stop DBs
+Manual: Engage dbeng (Simone Paganini) to bring the databases down on public-webproddb1-1-v_DATACENTER and public-webproddb2-1-v_DATACENTER and public-stgdb1-1-v_DATACENTER.
+
+- Execute the update script
+release_runner.pl -forced_host public-webproddb1-1-v_DATACENTER,public-webproddb2-1-v_DATACENTER,public-webapp2-1-v_DATACENTER,v_HOSTS -c sudo_cmd -m "./remote_transfer/update_glibc.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host public-webproddb1-1-v_DATACENTER,public-webproddb2-1-v_DATACENTER,public-webapp2-1-v_DATACENTER,v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec: ~/check_reconnect.py -H public-webproddb1-1-v_DATACENTER,public-webproddb2-1-v_DATACENTER,public-webapp2-1-v_DATACENTER,v_HOSTS
+
+-validate updated rpms
+release_runner.pl -forced_host public-webproddb1-1-v_DATACENTER,public-webproddb2-1-v_DATACENTER,public-webstgdb1-1-v_DATACENTER,public-webapp2-1-v_DATACENTER,v_HOSTS -c cmd -m "rpm -qa | grep glibc; rpm -qa | grep nscd" -threads -auto2
+
+Manual: Verify that the RPMs have been upgraded
+
+- start DBs
+Manual: Engage dbeng (Simone Paganini) to bring the databases up on public-webproddb1-1-v_DATACENTER and public-webproddb2-1-v_DATACENTER and public-stgdb1-1-v_DATACENTER.
+
+-start all apps on web hosts
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product web-stage -property "domain_override=ops.sfdc.net"  -c start_server -auto2 -threads
+
+- Start Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -property "domain_override=ops.sfdc.net"  -c start_server -auto2 -threads
+
+- add web hosts to pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product web-stage -property "domain_override=ops.sfdc.net"  -c add_to_pool -auto2 -threads
+
+-Validate web hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product web-stage -property "domain_override=ops.sfdc.net"  -c bigipcheck -auto2 -threads -d
+
+-enable monitoring on appropriate monitor host for web hosts
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS,public-webstgdb1-1-v_DATACENTER,public-webproddb1-1-v_DATACENTER,public-webproddb2-1-v_DATACENTER -c enable -m ops-monitor-v_DATACENTER

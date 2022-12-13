@@ -1,0 +1,76 @@
+{
+	"DCs": "v_DATACENTER",
+	"Title": "PROD Switch Configuration",
+	"Details":
+	{
+		"SM_Instance_List__c": "cs46",
+		"SM_Infrastructure_Type__c": "Primary"
+	},
+	"Implementation_Steps": [ 
+								"PROD Switch Configuration",
+								"",
+								"For the DB and DGDB Servers:",
+								"1. Label and Online the Switch Ports as per the Patch Plan",
+								"2. Update the device-alias database for the new nodes",
+								"3. Create the new VSAN for the new POD",
+								"4. Create the new zones and add them to a new zoneset",
+								"5. Add the Ports to the new VSAN",
+								"6. Confirm the zone members are active in the zoneset",
+								" "
+							]
+	"DCs": "v_DATACENTER",
+	"Title": "PROD Storage Allocation",
+	"Details":
+	{
+		"SM_Instance_List__c": "cs46",
+		"SM_Infrastructure_Type__c": "Primary"
+	},
+	"Implementation_Steps": [ 
+								"PROD Storage Allocation",
+								"",
+								"1. Using the addfile and initfile run emcalloc.pl/hdsallocrcom.pl to create the mapping and replication scripts",
+								"2. Scan and configure the database servers :- sudo rescandisks.sh -av",
+								"3. Create the /oracle filesystem",
+								"4. Add the remaining luns to ASM",
+								"5. Create clone by using the replication script generated (if not using ADGoverWAN)",
+								" ",
+								"Repeat on the Dataguard servers."
+							]
+	"DCs": "v_DATACENTER",
+	"Title": "DR Switch Configuration",
+	"Details":
+	{
+		"SM_Instance_List__c": "cs46",
+		"SM_Infrastructure_Type__c": "Secondary"
+	},
+	"Implementation_Steps": [ 
+								"DR Switch Configuration",
+								"",
+								"For the DB and DGDB Servers:",
+								"1. Label and Online the Switch Ports as per the Patch Plan",
+								"2. Update the device-alias database for the new nodes",
+								"3. Create the new VSAN for the new POD",
+								"4. Create the new zones and add them to a new zoneset",
+								"5. Add the Ports to the new VSAN",
+								"6. Confirm the zone members are active in the zoneset",
+								" "
+							]
+	"DCs": "v_DATACENTER",
+	"Title": "DR Storage Allocation",
+	"Details":
+	{
+		"SM_Instance_List__c": "cs46",
+		"SM_Infrastructure_Type__c": "Secondary"
+	},
+	"Implementation_Steps": [ 
+								"DR Storage Allocation",
+								"",
+								"1. Using the addfile and initfile run emcalloc.pl/hdsallocrcom.pl to create the mapping and replication scripts",
+								"2. Scan and configure the database servers :- sudo rescandisks.sh -av",
+								"3. Create the /oracle filesystem",
+								"4. Add the remaining luns to ASM",
+								"5. Create clone by using the replication script generated (if not using ADGoverWAN)",
+								" ",
+								"Repeat on the Dataguard servers."
+							]
+ }

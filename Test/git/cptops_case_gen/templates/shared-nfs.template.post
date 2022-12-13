@@ -1,0 +1,15 @@
+-check mounts on all servers for nfs connections to help get an even spread of pods
+Exec: ~/genSummary.py -H v_LISTOFHOSTS -c netstat_nfs
+
+-select a list of approximately a 1/4 of hosts listed above making sure you have a roughly equal spread of pods in the hosts selected and contact the assigned neteng / netops to delete persistence
+-once persistence is confirmed deleted append those hosts to the file ~/kt_remountcheck and run command below
+
+release_runner.pl -forced_host "$(~/remountlist.sh )"  -force_update_bootstrap -c sudo_cmd -m "./remote_transfer/client_remount.sh" -threads -auto2
+
+-check mounts on all servers to ensure they are rebalanced you should see roughly equal PROD pod nfs connections on all nfs boxes with a more or less even spread of pods
+Exec: ~/genSummary.py -H v_LISTOFHOSTS -c netstat_nfs
+
+
+- To regenerate this Implementation Plan use the following command.
+
+- v_COMMAND

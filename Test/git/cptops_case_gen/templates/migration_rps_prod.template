@@ -1,0 +1,80 @@
+
+
+
+
+- Check for the possibility of Data Preservation
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "mountpoint -q /boot" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check for artifact errors
+Exec: yum clean all;yum repolist|grep -i error;echo $? |grep 1
+
+- Performing racreset on the hosts
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "ipmitool mc reset cold" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Verify RPS pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product releasestore -c ensure_availability -min_host_percent 70 -exclude_host v_HOSTS -threads -auto2
+
+- Validate other hosts
+release_runner.pl -invdb_mode -c antstatuscheck_with_retries -host v_OHOSTS -product releasestore -superpod v_SUPERPOD -cluster v_CLUSTER -auto2 -threads
+
+- get version numbers for apps
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product releasestore -c versioncheck -threads -auto2 -host $(cat ~/v_CASE_include) > ~/v_CLUSTER-v_ROLE-v_CASE_version_output.txt
+
+- Extract app versions from output data.
+Exec: /opt/cpt/bin/get_versions.py -f ~/v_CLUSTER-v_ROLE-v_CASE_version_output.txt -o ~/v_CLUSTER-v_ROLE-v_CASE_manifests.txt --versions
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Stop app
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product releasestore -host v_HOSTS -c stop_server -threads -auto2
+
+- Remove from LB.
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -host v_HOSTS -product releasestore -c remove_from_pool  -threads -auto2
+
+
+-Taking the required backups.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -cvzhpf /sfdc/sfdc_logs.tar.gz /home/sfdc/logs || [[ \$? -eq 1 ]]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Set the iDB status of the hosts to IN_MAINTENANCE
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do inventory-action.pl -use_krb_auth -action update  -resource host -name $host -updateFields "operationalStatus=IN_MAINTENANCE";done>> ~/v_CASE_idb_log.txt
+
+- Begin Migration block
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do serial=$(inventory-action.pl -use_krb_auth -action read  -resource host -name $host |grep -i serialNumber|cut -d'"' -f4);clname=$(inventory-action.pl -use_krb_auth -action read  -resource host -name $host -fields cluster.name -q | grep name |cut -d'"' -f4);echo "/usr/lib/gigantor/bin/caspr_host_reimage.sh -c  $clname  -d v_ROLE  -h $host -i admin  -o CentOS -v 7 -n $serial -s v_SUPERPOD -m ops-monitor-v_DATACENTER.ops.sfdc.net"; done >> ~/v_CASE_commands_BLOCKv_NUM
+
+Manual: Reimage through Caspr
+
+- Refresh kerberos ticket
+Exec_with_creds: /usr/local/bin/ambari-manage/interactive-kinit.py
+
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do inventory-action.pl -use_krb_auth -action update  -resource host -name $host -updateFields "operationalStatus=ACTIVE";done>> ~/v_CASE_idb_log.txt
+
+- NTP  start
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpd" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Restore the backups.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -xpzhvf /sfdc/sfdc_logs.tar.gz -C /" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Deploy & start the application using the recorded versions.
+release_runner.pl -invdb_mode -dc v_DATACENTER -superpod v_SUPERPOD -cluster v_CLUSTER -host v_HOSTS  -c deploy -versions `cat ~/v_CLUSTER-v_ROLE-v_CASE_manifests.txt` -auto2 -no_lb
+
+- Validate the host.
+release_runner.pl -invdb_mode -c antstatuscheck_with_retries -host v_HOST -product releasestore -superpod v_SUPERPOD -cluster v_CLUSTER -threads -auto2
+
+Manual: Handover the host to rps team for validation before adding to LB
+
+- Add to LB.
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -host v_HOSTS -product releasestore -c add_to_pool  -threads -auto2
+
+
+- Enable GOC++ alerts ("disable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y
+

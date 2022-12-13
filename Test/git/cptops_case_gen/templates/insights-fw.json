@@ -1,0 +1,35 @@
+{
+    "Details":
+    {
+    "RecordTypeId": "012B000000009fB",
+    "Change-Type": "Minor",
+    "Status": "New/Unassigned",
+    "SRO-Resource": "No",
+    "Patch-Vendor": "Other",
+    "Patch-Desc": "Upgrades Drive Array Controller F/W to 6.34",
+    "Subject": "v_SUBJECT",
+    "Description": "For SFDC Compliance, we need to upgrade the below hosts",
+    "Implementation": "See Implementation Plan Attached",
+    "Verification": "Verification is performed in the implementation plan",
+    "Priority": "Sev3",
+    "Change-Area": "Systems - Patch/Upgrade Redundant Systems",
+    "Business-Justification": "Hosts need to updated to the latest revision for compliance and security reasons",
+    "Business-Reason": "Routine Maintenance",
+    "Cloud-Team": "Infrastructure Delivery",
+    "Backout": "This is a fix forward rollback",
+    "Shared-Infrastructure": "Yes",
+    "Tested-Change": "Yes",
+    "Risk-Level": "Low",
+    "Risk-Summary:Test Details": "Has been tested by IOPS",
+    "Impact-Severity": "Low",
+    "Impact-Scope": "Host/Node",
+    "Impact-Summary": "Low impact",
+    "Functional-System-Area": "Servers",
+    "Infrastructure-Type": "'Supporting Infrastructure'",
+    "Test-Evidence": "'Test Detail & Results Included (see Risk Summary)'",
+    "Vendor-Case-Number": ""
+    },
+    "Verif": [ "All checks will be included in the validation code ",
+                "validate_hp_dac_fw.py"
+                ]
+}

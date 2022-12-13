@@ -1,0 +1,44 @@
+RR based commands
+-Copy remote scripts to the target hosts
+
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Write patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py -l --case v_CASE --host v_HOSTS
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable
+
+- Stop Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -device_role v_ROLE -host v_HOSTS -c stop_server -auto2
+
+v_INCLUDE
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -device_role v_ROLE -host v_HOSTS -c start_server -auto2
+
+-HTTP Check
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product mandm-pal -c sudo_cmd -m "curl https://localhost:8081/pal/status.html -k --fail" -host v_HOSTS -threads -auto2
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+Exec: echo "Host v_HOSTS system patching completed"
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y

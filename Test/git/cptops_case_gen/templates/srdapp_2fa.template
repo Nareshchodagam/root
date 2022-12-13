@@ -1,0 +1,49 @@
+- Template for 2FA hosts
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS && echo 'BLOCK 1'
+
+- Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Write patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py -l --case v_CASE --host v_HOSTS
+
+
+- Notify people logged in about the patching and the coming reboot
+Exec: echo 'BLOCK 1' &&  echo "Now run on the v_HOSTS host the following: sudo /usr/bin/wall \"Hi, This host will be restarted within the next 30 mins as part of the monthly patch maintenance to keep our environment secure and up-to-date. Please save your session and move to another host if needed. Thanks.\""
+
+- Update CPT Tools on the host
+Exec: echo 'BLOCK 1' &&  echo "Now run on the v_HOSTS host the following: sudo yum --disablerepo=* --enablerepo=pipeline-cptops update -y cpt-tools"
+
+- Set the boot device to HDD
+Exec: echo 'BLOCK 1' &&  echo "Now run on the v_HOSTS host the following: sudo /usr/bin/python /opt/cpt/remote/manage_bootdevice.py -s -d HDD"
+
+- Update vendortools
+Exec: echo 'BLOCK 1' &&  echo "Now run on the v_HOSTS host the following: sudo /opt/cpt/remote/system_vendortools_update.sh -a v_BUNDLE"
+
+- Validate firmware and update if required
+Exec: echo 'BLOCK 1' &&  echo "Now run on the v_HOSTS host the following: sudo /usr/bin/python /opt/cpt/remote/validate_firmware.py -u -t"
+
+- Update host to latest bundle
+Exec: echo 'BLOCK 1' &&  echo "Now run on the v_HOSTS host the following: sudo /opt/cpt/remote/system_update.sh -a v_BUNDLE"
+
+- Reboot the host
+Exec: echo 'BLOCK 1' &&  echo "Now reboot the host v_HOSTS: sudo shutdown -r now"
+
+- Wait for the hosts to boot up
+Exec: echo 'BLOCK 1' &&  /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Validate SRDAPP host app is running
+Exec: echo 'BLOCK 1' &&  echo "Now run on the v_HOSTS host the following: sudo /opt/cpt/remote/validate_srdapp.sh"
+
+- Validate that the hosts have been patched and are running the correct version
+Exec: echo 'BLOCK 1' &&  echo "Now ssh to v_HOSTS and run the following: sudo /usr/bin/python ./remote_transfer/validate_patchset.py --bundle v_BUNDLE"
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS && echo 'BLOCK 1'
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+Exec: echo 'BLOCK 1' &&  echo "Host v_HOSTS system patching completed"

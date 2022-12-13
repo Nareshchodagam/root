@@ -1,0 +1,36 @@
+{
+  "DCs": "v_DATACENTER",
+  "Details":
+  {
+    "SM_Instance_List__c": "ap0,ap1,ap2,cs5,cs6,cs31",
+    "SM_Infrastructure_Type__c": "Primary"
+  },
+  "Implementation_Steps": [
+    "Overall instructions are attached here",
+    "https://git.soma.salesforce.com/CPT/infrautils/blob/master/ffx/README.md",
+
+    "run safety-check-cluster.sh against the clusters",
+    "this should be run in both locations",
+
+
+    "run rr-ffx-prechecks.sh with the batch file and number",
+    "rr-ffx-prechecks.sh <csvfile> <batchnum>",
+    "the batch file is attached to the case",
+    "gig-razor-rps-convert.sh <csvfile> <batchnum>",
+    "rr-ffx-postchecks.sh <csvfile> <batchnum>",
+    "rr-start-ffx.sh <csvfile> <batchnum>",
+
+    "For each host in the backfile run",
+    "ffx-waitforstartup.sh <hostname>",
+    "ffx-corruptfilefinder.sh <hostname>"
+  ],
+
+  "Comments": [
+    "For status Check-",
+
+    "https://docs.google.com/spreadsheets/d/117QaKzzGe3GXrBoMwKxrgvVguQctG3ImhU8_RtF2FG4/edit?ts=585061d5&pli=1#gid=1501147058"
+  ]
+}
+
+
+

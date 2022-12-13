@@ -1,0 +1,11 @@
+- Update cluster config in idb
+Exec: /opt/cpt/bin/update_patching_status.py --cluster v_CLUSTER
+
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -device_roles mnds -threads  -auto2 -c cmd -m "~/current/bigdata-util/util/build/ant validation validate single"
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-kerberos -device_roles mnds -threads  -auto2 -c cmd -m "~/current/bigdata-kerberos/kerberos/build/ant -- -w krb validate"
+
+Exec: echo "Patching completed"
+
+- To regenerate this Implementation Plan use the following command.
+
+- v_COMMAND

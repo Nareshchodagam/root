@@ -1,0 +1,124 @@
+RR based commands
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2
+
+
+- Writing CNC info to v_CASE_hostinfo file
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a cncinfo
+
+- Get Host/IB mac address from remote system
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -threads -auto2 -c sudo_cmd -m "~/remote_transfer/get_mac_addr.py" -property "sudo_cmd_line_trunk_fix=1" > ~/v_CASE_macinfo_rr.log
+
+- Extract MAC addresses from maclog file
+Exec: /opt/cpt/bin/extract_mac_addr.py -f ~/v_CASE_macinfo_rr.log -o ~/v_CASE_macinfo -c v_CASE
+
+- Validate the MAC address ( RT! vs Host )
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a validate_nic
+
+- Check the console connectivity
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a routecheck
+
+- Disk layout check
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a check_disk_config --disk_config standard
+
+- Check for the possibility of Data Preservation
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "mountpoint -q /sfdc" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check for artifact errors
+Exec: yum clean all;yum repolist|grep -i error;echo $? |grep 1
+
+- Disable monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Stop the running application
+release_runner.pl -forced_host v_HOSTS -c  sudo_cmd -m "/home/sfdc/start-stop.sh stop" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Taking required backups
+release_runner.pl -forced_host v_HOSTS -property "ssh_timeout=21600" -c sudo_cmd -m " tar -cvzhpf /sfdc/homesfdc_ce7.tar.gz /home/sfdc || [[ \$? -eq 1 ]]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "crontab -u sfdc -l >/tmp/sfdc_cron_bkp " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "cp /tmp/sfdc_cron_bkp /sfdc" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the iDB status of the hosts to IN_MAINTENANCE
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status IN_MAINTENANCE
+
+- Begin Migration block
+
+- Reset the dell console
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -r -v" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Install HP raid utils on required CNC's
+release_runner.pl  -forced_host $(cat ~/v_CASE_cnc) -c sudo_cmd -m "yum install hp-raid-utilities -y " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Installing Vanilla Image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a image --role v_ROLE --disk_config standard --preserve
+
+- Checking for awaiting_deployment status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous image
+
+- Check for iDB hardware_provisioning status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a idb_check --status HW_PROVISIONING
+
+- Removing IDB records of the hosts
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a erasehostname
+
+- Deploying App specific image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a deploy --role v_ROLE --cluster v_CLUSTER --superpod v_SUPERPOD
+
+Exec: echo 'Waiting for status change to deployed'
+
+- Checking for deployed status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous deploy
+
+Exec: echo 'Waiting for puppet run to complete and iDB status change to PROVISIONING' && sleep 1800
+
+- Refresh kerberos ticket
+Exec: kinit -R
+
+- Update IDB status of the hosts to Active
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status ACTIVE
+
+- END Migration block
+
+- Removing known hosts file
+Exec: rm -rf  ~/.ssh/known_hosts
+
+- Validate that the hosts have been migrated to CE7
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "uname -r |grep el7" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- NTP stop & start
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "systemctl stop ntpd"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpdate && sleep 5" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "hwclock --systohc" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpd" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2
+
+-Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2
+
+- Restore the backups
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -xvzhpf /sfdc/homesfdc_ce7.tar.gz -C / " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "crontab -u sfdc /sfdc/sfdc_cron_bkp" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start the application
+release_runner.pl -forced_host v_HOSTS -c  sudo_cmd -m "runuser -l sfdc -c 'grep -qi DAEMON_ENABLED=\\\"true\\\" /home/sfdc/argus.rc; if [ \$? -eq 0 ]; then sleep 180 ; else /home/sfdc/start-stop.sh start && sleep 180;fi'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start Splunk
+- release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -host v_HOSTS -c start_server -auto2
+
+- Verify app
+release_runner.pl -forced_host v_HOSTS -c  sudo_cmd -m "runuser -l sfdc -c '/home/sfdc/check-argus-services.py'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Enable GOC++ alerts ("disable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+Exec: echo "Host v_HOSTS system patching completed"
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y

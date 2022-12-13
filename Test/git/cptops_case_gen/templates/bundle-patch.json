@@ -1,0 +1,37 @@
+{
+  "Details": {
+    "Business-Name": "a6nB0000000CdW0IAK",
+    "RecordTypeId": "012B000000009fB",
+    "Change-Type": "Standard Pre Approved",
+    "Status": "New/Unassigned",
+    "SRO-Resource": "No",
+    "Patch-Vendor": "Redhat",
+    "Patch-Desc": "Upgrades OS to Latest Patch Bundle",
+    "Subject": "v_SUBJECT",
+    "Description": "For security compliance, the server in PROD LE DCs needs to have the latest bundle deployed for VMs ",
+    "Implementation": "See Implementation Plan Attached",
+    "Verification": "",
+    "Priority": "Sev3",
+    "Change-Category": "a8gB0000000L2ebIAC",
+    "Business-Justification": "PRA VM's need to updated to the latest revision for compliance and security reasons",
+    "Business-Reason": "Routine Maintenance",
+    "Team": "a00B00000076ATwIAM",
+    "Source-Control" : "GitHub",
+    "Pipeline": "aC3B0000000CaTKKA0",
+    "Shared-Infrastructure": "Yes",
+    "Tested-Change": "Yes",
+    "Risk-Level": "Low",
+    "Risk-Summary:Test Details": "PRA unavailable in kingdoms where latest image deployed while rollback is actioned. PRA will remain available in all other kingdoms so no impact to access.",
+    "Impact-Severity": "Low",
+    "Impact-Scope": "Host/Node",
+    "Impact-Summary": "PRA unavailable in kingdoms where latest image deployed while rollback is actioned. PRA will remain available in all other kingdoms so no impact to access.",
+    "Functional-System-Area": "Servers",
+    "Infrastructure-Type": "Supporting Infrastructure",
+    "Test-Evidence": "'Test Detail & Results Included (see Risk Summary)'",
+    "Vendor-Case-Number": ""
+  },
+  "Verif": [
+    "VMs running latest bundle are provisioned by PRA and are functional",
+    " "
+  ]
+}

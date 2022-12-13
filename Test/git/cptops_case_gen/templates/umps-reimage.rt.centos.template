@@ -1,0 +1,23 @@
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the iDB password to the latest otherwise we might get some errors
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/ib-passwd-rotation.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check local port
+release_runner.pl -forced_host v_DSTORE -c cmd -m "./remote_transfer/check_local_port 8087" -threads -auto2
+
+release_runner.pl -forced_host v_MSG -c cmd -m "./remote_transfer/check_local_port 8086" -threads -auto2
+
+- Validate host is running RHEL
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/check_os.py -t rhel" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- get version numbers for apps
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder,chatternow -c versioncheck -threads -auto2 -host v_HOSTS > /tmp/version_output.txt
+
+Exec: python ~/get_versions.py -f /tmp/version_output.txt -o ~/manifests.txt -a chatternow,sfdc-splunk-forwarder
+
+Exec: cat ~/manifests.txt
+
+- Exec gigantor workflow
+Exec: /usr/lib/gigantor/bin/kp_client start --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --name AFW_Racktastic_RPSApps_Reimage --arguments CLUSTER=v_CLUSTER DATACENTER=v_DATACENTER HOST=v_HOSTS MONITORHOST=v_MONITOR.ops.sfdc.net OS_NAME=centos6u7 POST_REIMAGE_COMMAND="/usr/local/libexec/system_update.sh -a v_BUNDLE -p" SUPERPOD=v_SUPERPOD DEVICEROLE=v_ROLE SERIAL_NUMBER=v_SERIAL PRESERVE=true RR_RPS_DEPLOY_OPTIONS="`cat ~/manifests.txt`" INVENTORY_ACTION_SCRIPT_PATH="/home/sfdc/current/dca-inventory-action/dca-inventory-action/inventory-action.pl" --release_host=ops0-orch1-1-v_DATACENTER.ops.sfdc.net

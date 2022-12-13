@@ -1,0 +1,74 @@
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host ops0-praapp1-1-v_DATACENTER -force_update_bootstrap -c sudo_cmd -m "ls" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- command to dowload the image
+Exec: cd ~ && wget http://ops-inst1-1-v_DATACENTER.$(hostname | cut -f 4  -d'-'|cut -d'.' -f 2).sfdc.net/media/hardware-baseimage/kvm/centos7-v_BUNDLE.01.qcow2
+
+ - copy the image to remote host
+Exec: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr ~/centos7-v_BUNDLE.01.qcow2 ops0-praccn1-1-v_DATACENTER:~/
+
+- Validate the PRACCN Health Status
+
+release_runner.pl --forced_host ops0-praccn1-1-v_DATACENTER,ops0-praccn2-1-v_DATACENTER -c sudo_cmd -m "python /opt/pra/os-patch-script/pra-ops.py health praccn" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Validate the PRACCN Cluster Status
+
+release_runner.pl --forced_host ops0-praccn1-1-v_DATACENTER,ops0-praccn2-1-v_DATACENTER -c sudo_cmd -m "etcdctl cluster-health" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Gathering the already deployed image id
+
+release_runner.pl --forced_host ops0-praapp1-1-v_DATACENTER  -c sudo_cmd -m " grep -i openstackprovider.vmdefaultimage  /etc/opt/pra/pra-dsm/service-config/pra-dsm-config.properties " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1" > ~/Rollbackimageid-v_DATACENTER.txt
+
+- Preparing Openstack Access
+release_runner.pl --forced_host ops0-praccn1-1-v_DATACENTER -c sudo_cmd -m " cp /root/admin-openrc ." -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+release_runner.pl --forced_host ops0-praccn1-1-v_DATACENTER  -c sudo_cmd -m " chmod 777 ./admin-openrc ." -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Verify if already the image exist or not
+release_runner.pl --forced_host ops0-praccn1-1-v_DATACENTER -c cmd -m "source ./admin-openrc;openstack image list | grep centos7-v_BUNDLE | cut -d '|' -f2 | wc -l > count && if [ \$(cat count) == 0 ]; then echo 0;fi|grep 0 " -threads -auto2 -property "cmd_line_trunk_fix=1"
+
+ - Deploy the Image on Openstack Platform
+release_runner.pl --forced_host ops0-praccn1-1-v_DATACENTER  -c cmd -m "source ./admin-openrc;openstack image create centos7-v_BUNDLE.01 --disk-format qcow2 --container-format bare --public --file ~/centos7-v_BUNDLE.01.qcow2" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1" > ~/latest_image-v_DATACENTER.txt
+
+- Prepare the Image update command
+release_runner.pl --forced_host ops0-praapp1-1-v_DATACENTER  -c sudo_cmd -m "echo -e 'update-secret --datacenter v_DATACENTER --key pra_openstack_image_id --value $(cat ~/latest_image-v_DATACENTER.txt | grep -w id |cut -d"|" -f3|cut -d " " -f2 )' > ~/update_secret" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Update the Image ID to Hashicorp Vault
+release_runner.pl --forced_host ops0-praapp1-1-v_DATACENTER -c sudo_cmd -m "./remote_transfer/vault.py " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Run's the Puppet agent
+
+release_runner.pl --forced_host ops0-praapp1-1-v_DATACENTER,ops0-praapp1-2-v_DATACENTER,ops0-praapp2-1-v_DATACENTER -c sudo_cmd -m "puppet agent -t; if [ \$? -eq 2 ]; then echo 0; fi|grep 0" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1" -comment 'BLOCK 1'
+
+- validate the PRAAPP Health Status
+release_runner.pl --forced_host ops0-praapp1-1-v_DATACENTER,ops0-praapp1-2-v_DATACENTER,ops0-praapp2-1-v_DATACENTER -c sudo_cmd -m "python /opt/pra/os-patch-script/pra-ops.py health praapp" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- prepare the recycle command
+release_runner.pl --forced_host ops0-praapp1-1-v_DATACENTER  -c sudo_cmd -m "echo -e 'recycle-oldest-active-not-assigned-desktops --batch-size 4 --count 4 --mode NOT_MONITORED' > ~/pravm-recycle-test" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Recycle PRVM to Perform Smoke testing
+Exec: ssh -t  ops0-praapp1-1-v_DATACENTER 'sudo -k java -jar /opt/pra/target/pra-ops-tool.jar --datacenter=v_DATACENTER @pravm-recycle-test'
+
+- Smoke testing evaluation steps
+
+release_runner.pl --forced_host ops0-praapp1-1-v_DATACENTER -c sudo_cmd -m "curl -s -X POST https://pra-dsm-v_DATACENTER.data.sfdc.net:1984/pra/v1/sessions?owner=$(echo $USER) -v --key /etc/pki_service/pra/pra-dsm-client/keys/pra-dsm-client-key.pem --capath /etc/pki_service/pra/pra-dsm-client/certificates  --cert /etc/pki_service/pra/pra-dsm-client/certificates/pra-dsm-client.pem --cacert /etc/pki_service/ca/cacerts.pem " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1" -comment 'BLOCK 1' > ~/pradesktop.txt
+
+release_runner.pl --forced_host $(cat ~/pradesktop.txt | grep ip | cut -d ":" -f3 |cut -d "," -f1) -c cmd -m " rpm -qa | grep sfdc-rele | grep 'v_BUNDLE';if [ \$? -eq 0 ]; then echo 0; fi|grep 0 " -threads -auto2 -property "synner=1" -property "sudo_cmd_line_trunk_fix=1" -comment 'BLOCK 1'
+
+release_runner.pl --forced_host $(cat ~/pradesktop.txt | grep ip | cut -d ":" -f3 |cut -d "," -f1) -c cmd -m " ping -c 4 ops0-bastion1-1-v_DATACENTER" -threads -auto2 -property "synner=1" -property "sudo_cmd_line_trunk_fix=1" -comment 'BLOCK 1'
+
+ Exec: ssh -t  $(cat ~/pradesktop.txt | grep ip | cut -d ":" -f3 |cut -d "," -f1| tr -d '\"') 'rpm -qa | grep sfdc-release > file.txt ; pra-cp -f file.txt'
+
+- prepare the recycle command
+
+release_runner.pl --forced_host ops0-praapp1-1-v_DATACENTER  -c sudo_cmd -m "echo -e 'recycle-active-desktops-with-assignment --assignment NOT_ASSIGNED --batch-size 15 --mode NOT_MONITORED' > ~/pravm-recycle" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Recycle all PRVM on old bundle
+Exec: ssh -t  ops0-praapp1-1-v_DATACENTER 'sudo -k java -jar /opt/pra/target/pra-ops-tool.jar --datacenter=v_DATACENTER @pravm-recycle'
+
+- clean the Download image
+release_runner.pl --forced_host ops0-praccn1-1-v_DATACENTER -c sudo_cmd -m "rm -rf  ~/centos7*" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- clean the Download image on release runnner
+Exec: rm -rf ~/centos7*

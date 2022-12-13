@@ -1,0 +1,20 @@
+{
+	"DCs": "v_DATACENTER",
+	"Details":
+	{
+		"SM_Instance_List__c": "na41",
+		"SM_Infrastructure_Type__c": "Primary"
+	},
+	"Implementation_Steps": [ 
+								"Automation.pl will be used to apply the latest tzdata packages.",
+								"Automation.pl will generate a hostlist from AFD and the results of each",
+								" host will be attached to the case for hosts executed against",
+								" ",
+								"svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/update_tzdata.sh",
+								" ",
+								"automation -P 60 -C 10 -F hostlist.txt -U root -S -t v_Case --logDir output -s update_tzdata.sh",
+								" ",
+								"grep ^vulnerable output/*",
+								" "
+							]
+ }

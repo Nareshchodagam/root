@@ -1,0 +1,17 @@
+- Get the local update scripts:
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/idbhost.py ~/idbhost.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/common.py ~/common.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/nagios_monitor.py ~/nagios_monitor.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/get_exclude_hosts.py ~/get_exclude_hosts.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/gen_hostlist.py ~/gen_hostlist.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/system_vendortools_update.sh ~/releaserunner/remote_transfer/system_vendortools_update.sh
+
+- Validate the host needs to be patched
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_linux_patchset.py -c v_BUNDLE -f ./remote_transfer/valid_versions.json" -threads -auto2 > ~/v_CLUSTER.hosts.txt
+
+- Generate an exclude list of those hosts already patched
+Exec: python get_exclude_hosts.py -f ~/v_CLUSTER.hosts.txt
+
+Exec: cat ~/exclude_hosts.txt
+
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/verify_hosts.py ~/verify_hosts.py

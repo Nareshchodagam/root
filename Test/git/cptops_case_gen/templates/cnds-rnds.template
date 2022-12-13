@@ -1,0 +1,53 @@
+- Copy remote scripts to the target hosts
+release_runner.pl -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2  -forced_host v_HOSTS -property "sudo_cmd_line_trunk_fix=1"
+
+- Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Write patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py -l --case v_CASE --host v_HOSTS
+
+- Check for RPMDB and YUM Lock
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/rpmdb_check.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Stop the running application
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/hdp/current/ambari-utils/stop-ambari-services.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+v_INCLUDE
+
+- Set boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check the host is online
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start the applications
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/hdp/current/ambari-utils/start-ambari-services.sh"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Sleep Before the App Status check
+Exec: sleep 10
+
+- Status check for application
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/hdp/current/ambari-utils/status-ambari-services.sh"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Enable GOC++ alerts ("disable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+- Update host config in idb
+Exec: /opt/cpt/bin/update_patching_status.py --host v_HOSTS
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y

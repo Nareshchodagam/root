@@ -1,0 +1,7 @@
+-  somecommand to generate host current iteration - W-3048431 to fix
+Exec: python gen_hostlist.py -G '{"dc": "v_DATACENTER", "role": "v_ROLE", "cluster": "v_CLUSTER", "dr": "True", "hostfilter": "v_HOSTFILTER"}' --outputfile ~/hosts.kp_client.v_CLUSTER
+
+- Concurrency and Failure Thresholds from json W-3048511
+
+- Run kp_client Workflow for v_CLUSTER ~/hosts.kp_client.v_CLUSTER
+Exec: /usr/lib/gigantor/bin/kp_client start_batch --id AFW_Supported_Workflows:ec1c86d2-e48a-4847-8b4f-f032accb2cde --concurrency 6 --failure_threshold 5 --datacenter v_DATACENTER --superpod v_SUPERPOD --cluster v_CLUSTER --file ~/hosts.kp_client.v_CLUSTER --arguments RR_RPS_DEPLOY_OPTIONS="-invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product sfdc-base,sfdc-splunk-forwarder,onboarding" SUDO_CMD="/usr/local/libexec/system_update.sh -a v_BUNDLE" --url "https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net"

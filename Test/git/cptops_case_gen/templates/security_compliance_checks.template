@@ -1,0 +1,6 @@
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Validating the compliance checks on targeted host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/security_compliance_checks.sh " -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+

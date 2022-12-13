@@ -1,0 +1,3 @@
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product v_PRODUCT_RRCMD -host v_HOSTS -c pingcheck -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product v_PRODUCT_RRCMD -host v_HOSTS -c logincheck -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product v_PRODUCT_RRCMD -host v_HOSTS -c antstatuscheck -threads -auto2

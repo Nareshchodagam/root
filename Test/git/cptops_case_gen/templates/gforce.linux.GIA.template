@@ -1,0 +1,31 @@
+-Copy remote scripts to the target hosts
+release_runner.pl -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2  -forced_host v_HOSTS -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+#- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable
+
+#- Stop the running application
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads  -auto2 -c cmd -m "~/current/bigdata-util/util/build/ant cluster stopLocalNode" -host v_HOSTS
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product sfdc-splunk-forwarder  -auto2 -c stop_server -host v_HOSTS
+
+
+v_INCLUDE
+ 
+- Reboot the host
+release_runner.pl -threads -auto2 -c sudo_cmd -m "reboot" -forced_host v_HOSTS -property "sudo_cmd_line_trunk_fix=1"
+
+-Check the host is online
+Exec: ~/check_reconnect.py -H v_HOSTS
+
+-Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+#- Start the applications
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads  -auto2 -c cmd -m "~/current/bigdata-util/util/build/ant -- cluster startLocalNode  -s disable" -host v_HOSTS
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product sfdc-splunk-forwarder  -auto2 -c start_server -host v_HOSTS
+
+#- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable

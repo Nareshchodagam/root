@@ -1,0 +1,24 @@
+- create a local remote_transfer directory
+
+Exec: mkdir -p ~/releaserunner/remote_transfer
+
+- Get the remote scripts:
+Exec: cp /opt/cpt/bin/system_update.sh ~/releaserunner/remote_transfer/system_update.sh
+Exec: cp /opt/cpt/includes/valid_versions.json ~/releaserunner/remote_transfer/valid_versions.json
+Exec: cp /opt/cpt/bin/validate_linux_patchset.py ~/releaserunner/remote_transfer/validate_linux_patchset.py
+Exec: cp /opt/cpt/bin/validate_firmware.py ~/releaserunner/remote_transfer/validate_firmware.py
+Exec: cp /opt/cpt/bin/manage_bootdevice.py ~/releaserunner/remote_transfer/manage_bootdevice.py
+Exec: cp /opt/cpt/bin/chk_symlinks.py ~/releaserunner/remote_transfer/chk_symlinks.py
+Exec: cp /opt/cpt/bin/system_vendortools_update.sh ~/releaserunner/remote_transfer/system_vendortools_update.sh
+Exec: cp /opt/cpt/bin/zookeeper_status.py ~/releaserunner/remote_transfer/zookeeper_status.py
+
+- Get the local update scripts:
+Exec: cp /opt/cpt/bin/check_reconnect.py ~/check_reconnect.py
+Exec: cp /opt/cpt/nagios_monitor.py ~/nagios_monitor.py
+Exec: cp /opt/cpt/idbhost.py ~/idbhost.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/common.py ~/common.py
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2
+
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/verify_hosts.py ~/verify_hosts.py

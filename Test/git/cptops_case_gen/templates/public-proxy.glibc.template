@@ -1,0 +1,97 @@
+-All actions take place on the release host using packaged release runner. Call KZ via
+
+-katzmeow.pl --case v_CASENUM --impl
+
+
+-v_CLUSTER
+
+- set your DC env
+Exec: DC=v_DATACENTER
+
+-RR based commands
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Get initial static routes
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/check_static_routes.py -f static_route.orig" -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-disable monitor
+release_runner.pl -c disable_host_monitor -forced_host v_HOSTS -forced_monitor_host ops-monitor-tyo.ops.sfdc.net -threads -auto2
+
+- remove from pool
+- to remove from pool login into the big ip and disable form within the pool
+
+- Stop the running application
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/etc/init.d/squid stop" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Stop Splunk
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - appmon -c 'source .p4include;/home/appmon/current/sfdc-splunk-forwarder/splunk/build/ant stop'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Execute the update script
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/update_glibc.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+    
+- Check the host is online
+Exec: /home/paulf/check_reconnect.py -H v_HOSTS
+
+- Verify glibc versions
+release_runner.pl -forced_host v_HOSTS -c cmd -m "rpm -qa | grep glibc; rpm -qa | grep nscd" -threads -auto2
+
+- Get post static routes
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/check_static_routes.py -f static_route.post" -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Do a diff and things should match
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "diff -s static_route.post static_route.orig" -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+
+
+-check app status
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/etc/init.d/squid status" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- validate the max file descriptors as squid startup can be problematic target is 65k if it fails do a stop and start to restart it.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/bin/squidclient -p 8080 mgr:info | grep 'file descrip'|grep -i max" -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-restart app if required
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/etc/init.d/squid restart" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- validate the max file descriptors as squid startup can be problematic target is 65k if it fails do a stop and start to restart it.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/bin/squidclient -p 8080 mgr:info | grep 'file descrip'|grep -i max" -auto2 -property "sudo_cmd_line_trunk_fix=1"
+   
+- Start Splunk
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - appmon -c 'source .p4include;/home/appmon/current/sfdc-splunk-forwarder/splunk/build/ant start'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+   
+- add to pool
+- to add from pool login into the big ip and disable form within the pool   
+- Enable nagios monitoring
+release_runner.pl -c enable_host_monitor -forced_host v_HOSTS -forced_monitor_host ops-monitor-tyo.ops.sfdc.net -threads -auto2
+
+Exec: echo "host v_HOSTS ghost patching completed"
+
+- Verify default gateway
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "cat /etc/sysconfig/network | grep GATEWAY" -property "sudo_cmd_line_trunk_fix=1"
+
+- Verify current running default gateway
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/sbin/route -n|grep '^0\.0\.0\.0'|cut -d ' ' -f 10" -property "sudo_cmd_line_trunk_fix=1"
+
+- Verify outbound connection
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "curl https://na1-blitz01.soma.salesforce.com/smth.jsp" -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "curl https://qaresponder.info" -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "curl https://ultra-api.ultradns.com" -property "sudo_cmd_line_trunk_fix=1"
+
+- Verify internet over http
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "wget -e use_proxy=yes -e http_proxy=`hostname -f`:8080 -O - http://www.google.com" -property "sudo_cmd_line_trunk_fix=1"
+
+- Verify internet over https
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "wget -e use_proxy=yes -e https_proxy=`hostname -f`:8080 -O - https://www.google.com" -property "sudo_cmd_line_trunk_fix=1"
+
+- Patchset completed comment
+Exec: echo "host v_HOSTS patching completed"
+
+
+
+
+
+

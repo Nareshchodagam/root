@@ -1,0 +1,28 @@
+{
+	"DCs": "v_DATACENTER",
+	"Details":
+	{
+		"SM_Instance_List__c": "v_CLUSTER",
+		"SM_Infrastructure_Type__c": "Primary"
+	},
+	"Implementation_Steps": [
+		"- DC = v_DATACENTER",
+		"- Role - v_Role",
+		"- Case_Number - v_Case",
+		"--------------------------------",
+		"- Centos 7 Migration Instructions",
+		"",
+		"- Execute Centos7-migration template.",
+		"",
+		"- Validate BigIP pool.",
+		"- Disable nagios monitoring",
+		"- Remove server from BigIP pool",
+		"- Stop running applications. ",
+		"- Use AFW_Razor_Basic_HostBuild WF to rebuild the server.",
+		"- Deploy applications.",
+		"- Start applications. ",
+		"- Add server back to BigIP pool",
+		"- Validate BigIP pool",
+		"- Enable nagios Monitoring. "
+	]
+}

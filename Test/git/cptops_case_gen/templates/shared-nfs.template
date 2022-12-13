@@ -1,0 +1,126 @@
+-connect to console
+console v_HOSTS
+
+-Run kinit to activate kerberos for some of the locally run commands
+Exec: kinit
+
+-Before starting check out everything is ok across the cluster
+Exec: ~/genSummary.py -H v_HOSTS -c zpool_status
+Manual: Validate above is ok
+Exec: ~/genSummary.py -H v_HOSTS -c nfssvcadm,netstat_nfs
+Manual: Validate above is ok
+Exec: ~/genSummary.py -H v_HOSTS -c dfh,vfstab
+Manual: Validate above is ok
+Exec: ~/genSummary.py -H v_HOSTS -c share,dfstab
+Manual: Validate above is ok
+Exec: ~/genSummary.py -H v_LISTOFHOSTS -c netstat_nfs
+Manual: Validate above is ok
+
+-set env
+release_runner.pl -forced_host "v_HOSTS" -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Before starting get snapshot of current hosts connected via netstat
+Exec: ~/genSummary.py -H v_HOSTS -c NETSTAT_NFS -i | tee ~/kt_remountcheck
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable 
+ 
+-disable nfs on server  then check to see that the host is no longer sharing
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/sbin/svcadm disable 'nfs/server'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-validate nfs server is online
+Exec: ~/genSummary.py -H v_HOSTS -s disabled
+
+- contact the assigned neteng / netops to delete persistence and pass the list of ips. This will be used later to re mount
+Manual: Contact neteng to have them delete persistence provide them with details in /home/$USER/output/neteng_details.txt
+
+-once persistence is confirmed deleted append those hosts to the file ~/kt_remountcheck and run command below
+release_runner.pl -forced_host "$(~/remountlist.sh )" -force_update_bootstrap -c sudo_cmd -m "./remote_transfer/client_remount.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-make sure no nfs connections
+Exec: ~/genSummary.py -H v_HOSTS -c showmount,netstat_nfs
+
+- Confirm no connections
+Manual: Confirm there are no connections
+
+-pre-emptive reboot before we make a change
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/sbin/reboot" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec: ~/check_reconnect.py -H v_HOSTS
+
+-run the patch presuming host comes up clean
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/system_update.sh -a v_BUNDLE -p" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-check host updated successfully
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py -u" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-With the host updated reboot
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/sbin/reboot" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec: ~/check_reconnect.py -H v_HOSTS
+
+-check host updated successfully
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py -k 150400-20" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+####
+- Check if /home mounted as part of the rpool
+release_runner.pl -forced_host v_HOSTS -c cmd -m "df -h /home | grep rpool/home" -threads -auto2
+
+IF /home not mounting properly
+
+To mount /home correctly after reboot/patch do the following
+release_runner.pl -forced_host v_HOSTS -c cmd -m "/usr/sbin/zfs list | grep ' /home'" -threads -auto2
+
+
+/home will should have a line like 
+rpool/home [ SNIP ] /home
+
+mount this on top of the current /home which has nothing there
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/sbin/zfs mount -O rpool/home" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check if /home mounted as part of the rpool
+release_runner.pl -forced_host v_HOSTS -c cmd -m "df -h /home" -threads -auto2
+
+-check host updated successfully
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py -k 150400-20" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+#####
+
+
+-enable nfs
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "/usr/sbin/svcadm enable 'nfs/server'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-validate nfs server is online
+Exec: ~/genSummary.py -H v_HOSTS -s online
+
+- Ensure all mount points for primary instances are mounted
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/check_mounts_siteaware.py" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-validate nfs server is sharing
+Exec: /usr/sbin/showmount -e v_HOSTS
+
+- validate we get something back
+Manual: Are there any mount points being shared?
+
+######
+
+-if failure above log on directly and run killrpc_restartnfs.sh
+
+#####
+
+- contact the assigned neteng / netops to delete persistence. Use the list of ips in ~/kt_remountcheck
+Manual: Contact neteng to delete persistence 
+
+-once persistence is confirmed deleted and the hosts to the file ~/kt_remountcheck and run command below
+release_runner.pl -forced_host "$(~/remountlist.sh )" -force_update_bootstrap -c sudo_cmd -m "./remote_transfer/client_remount.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-make sure there are nfs connections
+Exec: ~/genSummary.py -H v_HOSTS -c netstat_nfs
+
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable 
+
+- Patchset completed comment
+Exec: echo "host v_HOSTS solaris patching completed"

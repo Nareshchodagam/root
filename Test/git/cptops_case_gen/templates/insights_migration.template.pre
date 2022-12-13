@@ -1,0 +1,7 @@
+- create a local remote_transfer directory
+
+Exec: mkdir -p ~/releaserunner/remote_transfer
+
+- the get the remote scripts:
+Exec: svn export svn://vc-v_DATACENTER//subversion/tools/bmc/ib-passwd-rotation.sh ~/releaserunner/remote_transfer/ib-passwd-rotation.sh
+Exec: cp -R /opt/cpt/remote/* ~/releaserunner/remote_transfer/

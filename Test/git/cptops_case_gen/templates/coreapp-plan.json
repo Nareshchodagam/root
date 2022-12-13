@@ -1,0 +1,27 @@
+{
+	"DCs": "v_DATACENTER",
+	"Details":
+	{
+		"SM_Instance_List__c": "ap0,ap1,ap2,cs5,cs6,cs31",
+		"SM_Infrastructure_Type__c": "Primary"
+	},
+	"Implementation_Steps": [ 
+								"------------------1st method , manually",
+								"a)  shutdown app tier server via release runner",
+								"b)  upgrade kernel patch via command as shown",
+								"colo=`hostname |cut -d- -f4`",
+								"/bin/mount ops-inst1-1-${colo}:/export/install /mnt",
+								"/mnt/common/solaris-and-linux/sysfiles/system_update.sh -a v_BUNDLE -p",
+								"umount /mnt",
+								" ",
+								"reboot server",
+								"# sudo reboot",
+								"d) restart  app tier server via release runner",
+								"",
+								"------------------2nd method ,automation",
+								"via gigantor workflow   =AFW_Razor_RPSApps_Reboot",
+								"",
+								"sudo comand to issue before reboot =", 
+								"bash =(/usr/bin/wget -O - http://ops-inst1-1-<dc>/rhel_updates/system-update-current)"
+							]
+ }

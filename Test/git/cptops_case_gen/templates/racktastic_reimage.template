@@ -1,0 +1,11 @@
+- Exec gigantor workflow
+Exec_with_creds: /usr/lib/gigantor/bin/kp_client start --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --name AFW_Racktastic_Basic_Reimage_SSH --release_host=${HOSTNAME} --arguments CLUSTER=v_CLUSTER DATACENTER=v_DATACENTER HOST=v_HOSTS MONITORHOST=v_MONITOR SUPERPOD=v_SUPERPOD DEVICEROLE=v_ROLE SERIAL_NUMBER=v_SERIAL OS_NAME=centos7u2 POST_REIMAGE_COMMAND="/usr/local/libexec/system_update.sh -a v_BUNDLE -p" FINAL_HOST_STATE_IDB=ACTIVE PRESERVE=false INVENTORY_ACTION_SCRIPT_PATH="/home/sfdc/current/dca-inventory-action/dca-inventory-action/inventory-action.pl" RELEASEHOST=${HOSTNAME}
+
+- Check job execution status
+Exec_with_creds: /usr/lib/gigantor/bin/kp_client executions --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --state running --name AFW_Racktastic_Basic_Reimage_SSH --started 10m+
+
+- Check the server is back up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS -d 3600
+
+- Check job execution status
+Exec_with_creds: /usr/lib/gigantor/bin/kp_client executions --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --state success --name AFW_Racktastic_Basic_Reimage_SSH --started 120m+

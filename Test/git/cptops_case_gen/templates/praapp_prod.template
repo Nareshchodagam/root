@@ -1,0 +1,45 @@
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls"  -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease"  -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Write patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py -l --case v_CASE --host v_HOSTS
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD"  -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Validate service status prior to patching
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_praapp.sh -a" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+v_INCLUDE
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15"  -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE"  -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Sleep before validating PRA APP, so apps have some time to startup post-boot
+Exec: sleep 60
+
+- Validate service status post patching
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_praapp.sh -b" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+Exec: echo "Host v_HOSTS system patching completed"
+
+- Enable GOC++ alerts ("disable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -s 0 -H v_HOSTS
+
+- Auto pause case if case status is not equal to In Progress.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y

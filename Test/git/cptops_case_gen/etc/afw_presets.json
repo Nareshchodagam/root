@@ -1,0 +1,11 @@
+{
+	"failthresh": 2,
+	"concur": 5,
+	"na1": {"app": {"failthresh": 2, "concur": 5} },
+	"cs12": {"app": {"failthresh": 7, "concur": 7} },
+	"na": {"app": {"failthresh": 2, "concur": 5} },
+	"eu": {"app": {"failthresh": 2, "concur": 5} },
+	"ap": {"app": {"failthresh": 2, "concur": 5} },
+	"cs": {"app": {"failthresh": 2, "concur": 5} },
+	"gs": {"app": {"failthresh": 2, "concur": 5} }
+}

@@ -1,0 +1,5 @@
+- Get release_runner logs for case v_CASENUM
+Exec: /opt/rh/python27/root/usr/bin/python2.7 /opt/cpt/bin/get_RR_logs.py -f
+
+- Attach release_runner logs to case v_CASENUM
+Exec: report_gus_bug.pl --case_number v_CASENUM --attach ~/logs/releaserunner/release_runner_logs.gz

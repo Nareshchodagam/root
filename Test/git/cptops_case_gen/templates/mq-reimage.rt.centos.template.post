@@ -1,0 +1,25 @@
+- Check job execution status
+Exec: /usr/lib/gigantor/bin/kp_client executions --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --state running --name AFW_Racktastic_RPSApps_Reimage --started 10m+
+
+- Check the server is back up
+Exec: ~/check_reconnect.py -H v_HOSTS -d 2700
+
+- Check job execution status
+Exec: /usr/lib/gigantor/bin/kp_client executions --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --state success --name AFW_Racktastic_RPSApps_Reimage --started 120m+
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2
+
+- Validate host is running centos
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/check_os.py -t centos" -threads -auto2
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_linux_patchset.py -c v_BUNDLE -f ./remote_transfer/valid_versions.json -u" -threads -auto2
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable
+
+
+- To regenerate this Implementation Plan use the following command.
+
+- v_COMMAND

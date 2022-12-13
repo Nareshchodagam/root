@@ -1,0 +1,52 @@
+Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+-Stop the applicationg
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service mds stop" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+Exec: /usr/local/bin/inventory-action.pl -use_krb_auth -action create -resource host -name v_HOSTS -updateFields 'hostConfig.applicationProfileName=flux,hostConfig.key=flux_enabled,hostConfig.value=true'
+
+ - Validate Puppet agent running
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "sudo puppet agent -t" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+ - Phase 1
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/encrypt-secmgt-phase1.sh" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+Exec: /usr/local/bin/inventory-action.pl -use_krb_auth -action update -resource host -name v_HOSTS -updateFields 'operationalStatus=IN_MAINTENANCE'
+
+ - Validate Puppet agent running
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "sudo puppet agent -t" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+ - Phase 2 will reboot
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/encrypt-secmgt-phase2.sh" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS && echo 'BLOCK 1'
+
+ - Post Reboot
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/encrypt-secmgt-post-reboot.sh" -property "synner=1" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start the application.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service mds start" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check the app status.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service mds status" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+Exec: /usr/local/bin/inventory-action.pl -use_krb_auth -action update -resource host -name v_HOSTS -updateFields 'operationalStatus=ACTIVE'
+
+- Enable GOC++ alerts ("disable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -s 0 -H v_HOSTS
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+Exec: echo "Host v_HOSTS system patching completed"
+
+- Auto pause case if case status is not equal to In Progress.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y

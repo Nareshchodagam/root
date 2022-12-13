@@ -1,0 +1,31 @@
+- Get the SVN scripts
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/nagios_monitor.py /opt/cpt/bin/nagios_monitor.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/idbhost.py ~/idbhost.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/common.py ~/common.py
+
+
+- Disable the monitoring (All)
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable
+
+- Start the apps in sequence (g1)
+release_runner.pl -invdb_mode -superpod v_SP -cluster v_CLUSTER  -product chatternow -device_role dstore -g 1 -c start_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SP -cluster v_CLUSTER -product chatternow -device_role msg -g 4 -c start_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SP -cluster v_CLUSTER -product chatternow,chatterbox -device_role prsn,chan,sshare -g 6 -c start_server -threads -auto2
+
+- Add to pool (g1)
+release_runner.pl -invdb_mode -superpod v_SP -cluster v_CLUSTER -product chatternow,chatterbox -device_role prsn,chan,sshare -g 6 -c add_to_pool -threads -auto2
+
+
+- Start the apps in sequence (g2)
+release_runner.pl -invdb_mode -superpod v_SP -cluster v_CLUSTER -product chatternow -device_role dstore -g 2 -c start_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SP -cluster v_CLUSTER -product chatternow -device_role msg -g 3 -c start_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SP -cluster v_CLUSTER -product chatternow,chatterbox -device_role chan,prsn,sshare -g 5 -c start_server -threads -auto2
+
+- Add to pool (g2)
+release_runner.pl -invdb_mode -superpod v_SP -cluster v_CLUSTER -product chatternow,chatterbox -device_role prsn,chan,sshare -g 5 -c add_to_pool -threads -auto2
+
+- Start Splunk
+release_runner.pl -invdb_mode -superpod v_SP -cluster v_CLUSTER -product sfdc-splunk-forwarder -device_role prsn,chan,sshare,msg,dstore -c start_server -threads -auto2
+
+- Enable the monitoring (All)
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable

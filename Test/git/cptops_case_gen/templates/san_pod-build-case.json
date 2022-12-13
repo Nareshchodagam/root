@@ -1,0 +1,35 @@
+{
+	"Details":
+	{
+	"RecordTypeId": "012B000000009fB",
+	"Change-Type": "Minor",
+	"Status": "New",
+        "SRO-Resource": "No",
+	"Source-Control": "SVN",
+	"Subject": "v_SUBJECT",
+	"Description": "v_SUBJECT - Allocate Storage to the below hosts",
+	"Implementation": "See Implementation Plan Attached",
+	"Verification": "rescandisks.sh -av to see disks are presented", 
+	"Change-Area": "Storage - New Infrastructure Installs",
+	"Business-Reason": "Routine Maintenance",
+	"Cloud-Team": "",
+	"Backout": "This is a fix forward rollback",
+	"Shared-Infrastructure": "Yes",
+	"Risk-Level": "Low",
+	"Risk-Summary": "Steps to Mitigate Risk: This is a new pod with no live data on it.",
+	"Functional-System-Area": "Storage (EMC)",
+	"Infrastructure-Type": "'Primary and Secondary'",
+	"Vendor-Case-Number": ""
+	},
+	"Verif": [ "Ensure Each Host has the new storage visible on two paths: ",
+				"$ rescandisks.sh -av to see disks are presented",
+				" ",
+				"Confirm oracle filesystem has been created:", 
+				"$ df -h /oracle",
+				" ", 
+				"Confirm disks are visible to ASM:", 
+				"$ /etc/init.d/oracleasm listdisks ",
+				" " 
+				
+				]
+}

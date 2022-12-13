@@ -1,0 +1,46 @@
+- Command to check if remote hosts are alive and not patched
+Exec: ~/verify_hosts.py -H v_HOSTS --bundle v_BUNDLE --case v_CASE
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Set the boot device to HDD
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H $(cat ~/v_CASE_include) -c disable
+
+- Stop the running application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product searchserver -device_role v_ROLE -host $(cat ~/v_CASE_include) -c stop_server -threads -auto2
+
+- Stop Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -device_role v_ROLE -host $(cat ~/v_CASE_include) -c stop_server -threads -auto2
+
+v_INCLUDE
+
+- Verify symlinks were created correctly
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -c sudo_cmd -m "./remote_transfer/chk_symlinks.py" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec: ~/check_reconnect.py -H $(cat ~/v_CASE_include)
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start the application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product searchserver -device_role v_ROLE -host $(cat ~/v_CASE_include) -c start_server -threads -auto2
+
+- Start Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -device_role v_ROLE -host $(cat ~/v_CASE_include) -c start_server -threads -auto2
+
+-Ping Check Cluster
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product searchserver -device_role v_ROLE -host $(cat ~/v_CASE_include) -c pingcheck -threads -auto2 -cluster_status v_CL_OPSTAT
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H $(cat ~/v_CASE_include) -c enable
+
+Exec: echo "Host $(cat ~/v_CASE_include) system patching completed"

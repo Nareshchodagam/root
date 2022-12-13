@@ -1,0 +1,17 @@
+{
+	"ffx":{
+		"ping_port":8085
+		},
+	"nodeapp":{
+		"url":"http://%s:8083/manage/health",
+		"ping_port":8082
+		},
+	"mq":{
+		"url":"http://%s.salesforce.com/sfdc/monitor/qpidBrokerStatus.jsp",
+		"url2":"http://%s.my.salesforce.com/sfdc/monitor/mqEndToEndEnqueueDequeueTest.jsp"
+		},
+	"search":{
+		"url": "https://%s.salesforce.com/sfdc/admin/solr/SolrPeerInfo?serverAddr=%s.ops.sfdc.net:8983",
+		"url_1":"http://%s.ops.sfdc.net:8983/isAPeerUp.jsp"
+		}
+}

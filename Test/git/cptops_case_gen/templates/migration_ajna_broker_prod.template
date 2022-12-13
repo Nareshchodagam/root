@@ -1,0 +1,114 @@
+
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- get version numbers for apps
+Exec: ssh -o StrictHostKeyChecking=no $(cat ~/v_CASE_include |cut -d',' -f1 ) "rpm -qa |grep -i dva-kafka |cut -d'.' -f1" |grep dva |tee ~/v_CLUSTER-v_ROLE-v_CASE_manifests.txt
+
+- Writing CNC info to v_CASE_hostinfo file
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a cncinfo
+
+- Check the console connectivity
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a routecheck
+
+ - Get Host/IB mac address from remote system
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -threads -auto2 -c sudo_cmd -m "~/remote_transfer/get_mac_addr.py" -property "sudo_cmd_line_trunk_fix=1" > ~/v_CASE_macinfo_rr.log
+- Extract MAC addresses from maclog file
+Exec: /opt/cpt/bin/extract_mac_addr.py -f ~/v_CASE_macinfo_rr.log -o ~/v_CASE_macinfo -c v_CASE
+- Validate the MAC address ( RT! vs Host )
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a validate_nic
+- Check the console connectivity
+
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a check_disk_config --disk_config standard
+
+- Check for artifact errors
+Exec: yum clean all;yum repolist|grep -i error;echo $? |grep 1
+
+
+- Ajna broker health check(SPOF)
+Exec_with_creds: /opt/cpt/bin/check_nagios.py -c v_CASE
+
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Stop kafka
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "service ajna-kafka stop" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the iDB status of the hosts to IN_MAINTENANCE
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status IN_MAINTENANCE
+
+- Begin Migration block
+
+- Reset the dell console
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -r -v" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Install HP raid utils on required CNC's
+release_runner.pl -forced_host $(cat ~/v_CASE_cnc) -c sudo_cmd -m "yum install hp-raid-utilities -y " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Installing Vanilla Image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a image --role v_ROLE --disk_config standard --preserve
+
+- Checking for awaiting_deployment status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous image
+
+- Check for iDB hardware_provisioning status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a idb_check --status HW_PROVISIONING
+
+- Removing IDB records of the hosts
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a erasehostname
+
+- Deploying App specific image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a deploy --role v_ROLE --cluster v_CLUSTER --superpod v_SUPERPOD
+
+Exec: echo 'Waiting for status change to deployed'
+
+- Checking for deployed status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous deploy
+
+Exec: echo 'Waiting for puppet run to complete and iDB status change to PROVISIONING' && sleep 1200
+
+- Refresh kerberos ticket
+Exec: kinit -R
+
+- Update IDB status of the hosts to Active
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status ACTIVE
+
+- END Migration block
+
+- Removing known hosts file
+Exec: rm -rf  ~/.ssh/known_hosts
+
+- Validate that the hosts have been migrated to CE7
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "uname -r |grep el7" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- NTP stop & start
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl stop ntpd"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpdate && sleep 5" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "hwclock --systohc" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpd" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "yum downgrade zulu-8-8.46.0.20 -y" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rpm -q zulu-8 | grep -i zulu-8-8.46.0.20" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Deploy apps
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "yum install -y `cat ~/v_CLUSTER-v_ROLE-v_CASE_manifests.txt`"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start kafka
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ajna-kafka.service" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Validate app
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl status ajna-kafka.service" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+Exec: sleep 300
+
+- Underrep Sync Check (number returned by amiunderrep func has to be 0 to continue)
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product mandm-kafka -device_role v_ROLE -host v_HOSTS -c cmd -m "/opt/dva-kafka/bin/amiunderrep.sh" -auto2 -threads
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y
+

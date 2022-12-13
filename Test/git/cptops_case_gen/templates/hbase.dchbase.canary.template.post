@@ -1,0 +1,12 @@
+Exec: echo "Patching completed"
+
+- Added as per W-5190509
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads  -auto2 -c cmd -m "hostname |grep -i dev7hdaas ;if [ \$? -eq 0 ];then ~/current/bigdata-util/util/build/ant backup sanityValidation; else : ;fi " -host $(cat ~/v_CASE_include|awk -F ',' '{print $1}')
+
+- Update cluster config in idb
+Exec: /opt/cpt/bin/update_patching_status.py --cluster v_CLUSTER
+
+
+- To regenerate this Implementation Plan use the following command.
+
+- v_COMMAND

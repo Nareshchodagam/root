@@ -1,0 +1,6 @@
+- Validate cluster is healthy.
+release_runner.pl --forced_host v_HOST -c sudo_cmd -m "/opt/vaultczar-current/test/round_trip.sh" -threads -auto2
+
+- To regenerate this Implementation Plan use the following command.
+
+- v_COMMAND

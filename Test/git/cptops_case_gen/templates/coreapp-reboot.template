@@ -1,0 +1,39 @@
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Write patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py -l --case v_CASE --host v_HOSTS
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Validate hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product onboarding,sfdc-splunk-forwarder,sfdc-base -c bigipcheck -bigipstatus AVAILABILITY_STATUS_GREEN -host v_HOSTS -threads -auto2
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable
+
+- Stop the running application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product onboarding,sfdc-base,sfdc-splunk-forwarder -host v_HOSTS -c stop_server -stopall  -property pingcheck_max_tries=600,pingcheck_poll_interval_secs=3,uptime_limit=30 -ping_validation -min_host_percent 33 -threads -auto2 -host_status v_HO_OPSTAT
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec_with_creds: /opt/cpt/bin/check_reconnect.py -H v_HOSTS
+
+- Start the application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product onboarding,sfdc-base,sfdc-splunk-forwarder -host v_HOSTS -c start_server -property pingcheck_max_tries=600,pingcheck_poll_interval_secs=3,uptime_limit=30 -ping_validation -min_host_percent 33 -threads -auto2 -host_status v_HO_OPSTAT
+
+- Validate the application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product onboarding,sfdc-splunk-forwarder,sfdc-base -host v_HOSTS -c predefined_checks -invdb_mode -property pingcheck_max_tries=600,pingcheck_poll_interval_secs=3,uptime_limit=30 -ping_validation -min_host_percent=33 -threads -auto2 -host_status v_HO_OPSTAT
+
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+Exec: echo "Host v_HOSTS system patching completed"

@@ -1,0 +1,12 @@
+pipeline_template: rpm/Jenkinsfile
+email_reply_to: mgaddy@salesforce.com,sbhatheja@salesforce.com,jdiuwe@salesforce.com,mtunajek@salesforce.com,seth.goldberg@salesforce.com
+time_out_mins: 180
+number_of_artifacts_to_keep: 3
+compliance_required: false
+docker_test_images:
+- dva/sfdc_centos7_devel
+unit_tests_command: ./strata/unittest
+docker_package_images:
+- dva/sfdc_centos7_java_rpmbuild
+package_generation_command: ./strata/package
+package_repository: cpt

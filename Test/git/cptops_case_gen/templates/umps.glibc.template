@@ -1,0 +1,62 @@
+RR based commands
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS_ALL -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Validate hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -host v_HOSTS_CPS  -product chatternow,chatterbox -c bigipcheck -d -threads -auto2
+
+- disable monitor
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS_ALL -c disable -m ops-monitor-v_DATACENTER
+
+
+- remove from pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -device_role chan,prsn,sshare -host v_HOSTS_CPS -c remove_from_pool -threads -auto2
+
+- stop app
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -device_role chan,prsn,sshare -host v_HOSTS_CPS -c stop_server  -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow -device_role msg -host v_HOSTS_MSG -c stop_server  -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow -device_role dstore -host v_HOSTS_DSTORE -c stop_server -threads -auto2
+
+
+- Stop Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -device_role chan,prsn,sshare,msg,dstore -host v_HOSTS_ALL -c stop_server -threads -auto2
+
+- Execute the update script
+release_runner.pl -forced_host v_HOSTS_ALL -c sudo_cmd -m "./remote_transfer/update_glibc.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Make sure hosts are HDD bootable 
+release_runner.pl -forced_host v_HOSTS_ALL -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS_ALL -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check the host is online
+Exec: ~/check_reconnect.py -H v_HOSTS_ALL
+
+- Verify glibc versions
+release_runner.pl -forced_host v_HOSTS_ALL -c cmd -m "rpm -qa | egrep 'glibc|nscd'" -threads -auto2
+
+- Start the application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow -device_role dstore -host v_HOSTS_DSTORE -c start_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow -device_role msg -host v_HOSTS_MSG -c start_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -device_role prsn,chan,sshare -host v_HOSTS_CPS -c start_server -threads -auto2
+
+- validate app is up.
+release_runner.pl -forced_host v_HOSTS_ALL -c sudo_cmd -m "ps aux|grep -i sfdc|grep -v grep" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Start Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -device_role prsn,chan,sshare,msg,dstore -host v_HOSTS_ALL -c start_server -threads -auto2
+
+- add to pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -device_role prsn,chan,sshare -host v_HOSTS_CPS -c add_to_pool -threads -auto2
+
+- Validate hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -host v_HOSTS_CPS -c bigipcheck -d -threads -bigipstatus AVAILABILITY_STATUS_GREEN -auto2
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS_ALL -c enable -m ops-monitor-v_DATACENTER
+
+

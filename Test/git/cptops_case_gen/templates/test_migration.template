@@ -1,0 +1,64 @@
+- create a local remote_transfer directory
+
+Exec: mkdir -p ~/releaserunner/remote_transfer
+
+- the get the remote scripts:
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/valid_versions.json ~/releaserunner/remote_transfer/valid_versions.json
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/validate_linux_patchset.py ~/releaserunner/remote_transfer/validate_linux_patchset.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/common.py ~/releaserunner/remote_transfer/common.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/manage_bootdevice.py ~/releaserunner/remote_transfer/manage_bootdevice.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/check_os.py ~/releaserunner/remote_transfer/check_os.py
+Exec: svn export svn://vc-v_DATACENTER//subversion/tools/bmc/ib-passwd-rotation.sh ~/releaserunner/remote_transfer/ib-passwd-rotation.sh
+
+- then get the local update scripts:
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/check_reconnect.py ~/check_reconnect.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/nagios_monitor.py /opt/cpt/bin/nagios_monitor.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/idbhost.py ~/idbhost.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/includes/common.py ~/common.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/get_versions.py ~/get_versions.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/get_ib_passwd.py ~/get_ib_passwd.py
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the iDB password to the latest otherwise we might get some errors
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/ib-passwd-rotation.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable
+
+- get version numbers for apps
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product v_PRODUCTS -c versioncheck -threads -auto2 -host v_HOSTS > /tmp/version_output.txt
+
+Exec: python ~/get_versions.py -f /tmp/version_output.txt -o ~/manifests.txt -a mq-broker,sfdc-splunk-forwarder
+
+Exec: cat ~/manifests.txt
+
+- Exec gigantor workflow
+Exec: /usr/lib/gigantor/bin/kp_client start --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --name AFW_Razor_RPSApps_Reimage --arguments CLUSTER=v_CLUSTER DATACENTER=v_DATACENTER HOST=v_HOSTS MONITORHOST=v_MONITOR.ops.sfdc.net OS_TYPE=CentOS OS_VERSION_MAJOR=6 OS_VERSION_MINOR=7 POST_REIMAGE_COMMAND="/usr/local/libexec/system_update.sh -a v_BUNDLE -p" RR_RPS_DEPLOY_OPTIONS="`cat ~/manifests.txt`" SUPERPOD=v_SUPERPOD SERIAL_NUMBER=v_SERIAL PRESERVE=true IB_USER=admin IB_PASSWORD=`python ~/get_ib_passwd.py` INVENTORY_ACTION_SCRIPT_PATH="/home/sfdc/current/dca-inventory-action/dca-inventory-action/inventory-action.pl" --release_host=ops-orch1-1-v_DATACENTER.ops.sfdc.net 
+
+- Check job execution status
+Exec: /usr/lib/gigantor/bin/kp_client executions --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --state running --name AFW_Razor_RPSApps_Reimage --started 10m+
+
+- Check the server is back up
+Exec: ~/check_reconnect.py -H v_HOSTS -d 2700
+
+- Check job execution status
+Exec: /usr/lib/gigantor/bin/kp_client executions --url="https://gig-kingpin1-0-v_DATACENTER.data.sfdc.net" --state success --name AFW_Razor_RPSApps_Reimage --started 120m+
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Validate host is running centos
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/check_os.py -t centos" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable
+
+
+- To regenerate this Implementation Plan use the following command.
+
+- v_COMMAND

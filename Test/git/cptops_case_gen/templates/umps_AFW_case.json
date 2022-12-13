@@ -1,0 +1,48 @@
+{
+	"Details":
+	{
+	"RecordTypeId": "012B000000009fB",
+	"Change-Type": "Standard Pre Approved",
+	"Status": "Approved, Scheduled",
+	"SRO-Resource": "No",
+	"Patch-Vendor": "",
+	"Patch-Desc": "",
+	"Subject": "v_SUBJECT",
+	"Description": "This case to execute AFW workflows on Chatternow/FileSync servers to bring them under AFW control and to update on RHEL6u6.",
+	"Implementation": "See Implementation plan attached",
+	"Verification": "",
+	"Priority": "Sev3",
+	"Change-Area": "Systems - Upgrade RHEL Ver UMPS Tier",
+	"Business-Justification": "These hosts need to on-board for AFW and to updated to RHEL6u6 for compliance and security reasons",
+	"Business-Reason": "Routine Maintenance",
+	"Cloud-Team": "Infrastructure Delivery",
+	"Backout": "General rollback is to revert DHCP, kickstart host back the old way, put apps back on.",
+	"Shared-Infrastructure": "Yes",
+	"Tested-Change": "Yes",
+	"Risk-Level": "Low",
+	"Risk-Summary": "Test Details: Has been tested in GUS",
+	"Impact-Severity": "Low",
+	"Impact-Scope": "Host/Node",
+	"Impact-Summary": "Low impact due to group(G1/G2) based conversion",
+	"Functional-System-Area": "UMPS Unified Messaging App",
+	"Infrastructure-Type": "'Supporting Infrastructure'",
+	"Test-Evidence": "Test Detail & Results Included (see Risk Summary)",
+	"Vendor-Case-Number": ""
+	},
+	"Verif": [	"Confirm that you can find puppet string in /etc/motd file",
+	  			" ",
+	  			"cat /etc/motd | grep -i puppet",
+				" ",
+	  			"Confirm /etc/redhat-release is updated:",
+	  			" ",
+	  			"$ grep 6.6 /etc/redhat-release",
+	  			" ",
+	  			"Validate kernel version:",
+				" ",
+				"$ uname -a | grep 2.6.32-504.12.2.el6.x86_64 ",
+	  			" ",
+				"Check the cluster health url - https://CLUSTERNAME.salesforce.com/api/monitor/syntransaction",
+				" "
+
+				]
+}

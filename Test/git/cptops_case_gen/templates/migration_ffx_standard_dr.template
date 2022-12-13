@@ -1,0 +1,147 @@
+
+
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- get version numbers for apps
+- release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-base,lightcycle-snapshot,mandm-agent -c versioncheck -drn -threads -auto2 -host $(cat ~/v_CASE_include) -cluster_status v_CL_OPSTAT > ~/v_CLUSTER-v_ROLE-v_CASE_version_output.txt
+
+- Extract app versions from output data.
+- Exec: /opt/cpt/bin/get_versions.py -f ~/v_CLUSTER-v_ROLE-v_CASE_version_output.txt -o ~/v_CLUSTER-v_ROLE-v_CASE_manifests.txt --versions
+- Exec: cat ~/v_CLUSTER-v_ROLE-v_CASE_manifests.txt |grep sfdc-base |grep lightcycle-snapshot | grep mandm-agent
+
+- Verify if packages are present in rps
+- Exec: python /opt/cpt/bin/validate_manifests.py `cat ~/v_CLUSTER-v_ROLE-v_CASE_manifests.txt`
+
+- Verify the FFX buddy
+Exec: /opt/cpt/bin/verify_ffx_buddy.py -H v_HOSTS
+
+- Writing CNC info to v_CASE_hostinfo file
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a cncinfo
+
+- Get Host/IB mac address from remote system
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -threads -auto2 -c sudo_cmd -m "~/remote_transfer/get_mac_addr.py" -property "sudo_cmd_line_trunk_fix=1" > ~/v_CASE_macinfo_rr.log
+
+- Extract MAC addresses from maclog file
+Exec: /opt/cpt/bin/extract_mac_addr.py -f ~/v_CASE_macinfo_rr.log -o ~/v_CASE_macinfo -c v_CASE
+
+- Validate the MAC address ( RT! vs Host )
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a validate_nic
+
+- Check the console connectivity
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a routecheck
+
+- Disk layout check
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a check_disk_config --disk_config standard
+
+- Check for artifact errors
+Exec: yum clean all;yum repolist|grep -i error;echo $? |grep 1
+
+- Disable nagios monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Stop the Agent
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product mandm-agent -host v_HOSTS -c stop_server -property uptime_limit=30 -ignored_process_names 'perl' -stopall -threads -auto2 -host_status any -cluster_status any
+
+- Stop the running application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-base -host v_HOSTS -c stop_server -property uptime_limit=30 -ignored_process_names 'perl' -stopall -threads -auto2 -host_status any -cluster_status any
+
+- Pre : FFX data integrity check
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -threads -auto2 -c sudo_cmd -m "~/remote_transfer/ffx_data_integrity.sh" -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the iDB status of the hosts to IN_MAINTENANCE
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status IN_MAINTENANCE
+
+- Set the iDB status of the BUDDY hosts to IN_MAINTENANCE
+Exec: /opt/cpt/bin/verify_ffx_buddy.py -H v_HOSTS -B -C v_CASE
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE_buddy -a cncinfo
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE_buddy -a updateopsstatus --status IN_MAINTENANCE
+
+- Begin Migration block
+
+- Reset the dell console
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -r -v" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Install HP raid utils on required CNC's
+release_runner.pl -forced_host $(cat ~/v_CASE_cnc) -c sudo_cmd -m "yum install hp-raid-utilities -y " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Installing Vanilla Image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a image --role v_ROLE --disk_config standard --preserve
+
+- Checking for awaiting_deployment status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous image
+
+- Check for iDB hardware_provisioning status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a idb_check --status HW_PROVISIONING
+
+- Removing IDB records of the hosts
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a erasehostname
+
+- Deploying App specific image
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a deploy --role v_ROLE --cluster v_CLUSTER --superpod v_SUPERPOD --preserve
+
+Exec: echo 'Waiting for status change to deployed'
+
+- Checking for deployed status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a status --previous deploy
+
+Exec: echo 'Waiting for puppet run to complete and iDB status change to PROVISIONING' && sleep 900
+
+- Check for iDB provisioning status
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a idb_check --status PROVISIONING
+
+
+- Refresh kerberos ticket
+Exec: kinit -R
+
+- END Migration block
+
+- Removing known hosts file
+Exec: rm -rf  ~/.ssh/known_hosts
+
+- NTP stop & start
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl stop ntpd"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1" 
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpdate && sleep 5" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1" 
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "hwclock --systohc" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1" 
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpd" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1" 
+
+
+- Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Post : FFX data integrity check
+release_runner.pl -forced_host $(cat ~/v_CASE_include) -threads -auto2 -c sudo_cmd -m "~/remote_transfer/ffx_data_integrity.sh" -property "sudo_cmd_line_trunk_fix=1"
+
+- Deploy apps
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -host v_HOSTS -c deploy -stopall -threads  -no_db_data_init  -auto2 -versions lightcycle-snapshot@lightcycle-snapshot.1.2.531,sfdc-base@228.10,mandm-agent@Agent.68.5 -drnostart -host_status any -cluster_status any
+
+- Start the application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-base -device_role v_ROLE -host v_HOSTS -c start_server -threads -auto2 -host_status any -cluster_status any
+
+- Start the Agent
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product mandm-agent -device_role v_ROLE -host v_HOSTS -c start_server -threads -auto2 -host_status any -cluster_status any
+
+-Ping Check Cluster
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product mandm-agent,sfdc-base -device_role v_ROLE -host v_HOSTS -c pingcheck_with_retries -threads -auto2 -host_status any -cluster_status any
+
+- Verify the FFX buddy
+Exec: /opt/cpt/bin/verify_ffx_buddy.py -H v_HOSTS
+
+- Update IDB status of the hosts to Active
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE -a updateopsstatus --status ACTIVE
+
+- Update IDB status of the BUDDY hosts to Active
+Exec: /opt/cpt/bin/verify_ffx_buddy.py -H v_HOSTS -B -C v_CASE
+Exec: /opt/cpt/bin/migration_manager.py -c v_CASE_buddy -a updateopsstatus --status ACTIVE
+
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y
+

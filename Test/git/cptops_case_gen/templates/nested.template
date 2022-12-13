@@ -1,0 +1,8 @@
+pre_check
+disable_monitoring
+remove_lb:^.*app|^.*cbatch
+stop_server
+start_server
+add_lb:^.*app|^.*cbatch
+enable_monitoring
+post_check

@@ -1,0 +1,35 @@
+-RR based commands
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Stop consumer
+release_runner.pl -forced_host v_HOSTNAME_MMCNSMR -c sudo_cmd -m "su - appmon -c '/home/appmon/current/mandm-graphite-kafka-consumer/kmcg/build/ant stop'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Execute the update script
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/system_update.sh -a v_BUNDLE -p" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- stop storage - Kill carbon-cache
+release_runner.pl -forced_host v_HOSTNAME_MMAPP -c sudo_cmd -m "./remote_tranfer/graphite.py --kill-cache" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec: ~/check_reconnect.py -H v_HOSTS
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start Splunk
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - appmon -c '/home/appmon/current/sfdc-splunk-forwarder/splunk/build/ant start''" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start consumer
+release_runner.pl -forced_host v_HOSTNAME_MMCNSMR -c sudo_cmd -m "su - appmon -c '/home/appmon/current/mandm-graphite-kafka-consumer/kmcg/build/ant start'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- start latency reporter (ajna-mmcnsmr8-2-sfz)
+release_runner.pl -forced_host ajna-mmcnsmr8-2-sfz -c sudo_cmd -m "./remote_transfer/graphite.py --start-reporter" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+

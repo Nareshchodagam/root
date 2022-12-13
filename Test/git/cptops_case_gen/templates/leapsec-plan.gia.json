@@ -1,0 +1,21 @@
+{
+	"DCs": "wax,chi",
+	"Details":
+	{
+		"SM_Instance_List__c": "na41",
+		"SM_Infrastructure_Type__c": "Primary"
+	},
+	"Implementation_Steps": [ 
+								"Automation.pl will be used to apply the latest tzdata packages.",
+								"Automation.pl will generate a hostlist from AFD and the results of each",
+								" host will be attached to the case for hosts executed against",
+								" ",
+								"svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/tzdata_update.sh",
+								" ",
+								"automation -P 60 -C 10 -R v_Role -U root -S -t v_Case --logDir output -s tzdata_update.sh",
+								" ",
+								"grep ^vulnerable output/*",
+								" ",
+								"All hosts matching v_Role will get this change applied"
+							]
+ }

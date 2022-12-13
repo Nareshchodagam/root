@@ -1,0 +1,82 @@
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Delete cptrelease file
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /etc/cptrelease" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Write patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py -l --case v_CASE --host v_HOSTS
+
+- Check for RPMDB and YUM Lock
+release_runner.pl -forced_host v_CPS1,v_MSG1,v_DSTORE1 -c sudo_cmd -m "./remote_transfer/rpmdb_check.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Verify Cluster and Host Status
+Exec: /opt/cpt/bin/synthetic_check.py -V v_VIP -H v_HOSTNAME_CPS
+
+- Checking Weather Both Dstore are in Healthy State
+release_runner.pl -forced_host v_HOSTNAME_DSTORE -c sudo_cmd -m "./remote_transfer/check_local_port.py -p 8087" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Checking Weather Both Msg host are in healty State
+release_runner.pl -forced_host v_HOSTNAME_MSG -c sudo_cmd -m "./remote_transfer/check_local_port.py -p 8086" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Validate hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -host v_HOSTNAME_CPS -product chatternow,chatterbox -c bigipcheck -d -threads -auto2
+
+- Set the boot device to HDD
+release_runner.pl -forced_host v_CPS1,v_MSG1,v_DSTORE1 -c sudo_cmd -m "./remote_transfer/manage_bootdevice.py -s -d HDD" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- disable monitor
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c disable
+
+- remove from pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -host v_CPS1 -c remove_from_pool -threads -auto2
+
+- stop app
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -host v_CPS1 -c stop_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow -host v_MSG1 -c stop_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow -host v_DSTORE1 -c stop_server -threads -auto2
+
+- Stop Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -host v_CPS1,v_MSG1,v_DSTORE1 -c stop_server -threads -auto2
+
+v_INCLUDE
+
+- Verify symlinks were created correctly
+release_runner.pl -forced_host v_CPS1,v_MSG1,v_DSTORE1 -c sudo_cmd -m "./remote_transfer/chk_symlinks.py" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Reboot the host
+release_runner.pl -forced_host v_CPS1,v_MSG1,v_DSTORE1 -c sudo_cmd -m "reboot" -property "ssh_timeout=15" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Wait for the hosts to boot up
+Exec: /opt/cpt/bin/check_reconnect.py -H v_CPS1,v_MSG1,v_DSTORE1
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_CPS1,v_MSG1,v_DSTORE1 -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start the application
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow -host v_DSTORE1 -c start_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow -host v_MSG1 -c start_server -threads -auto2
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -host v_CPS1 -c start_server -threads -auto2
+
+- validate app is up.
+release_runner.pl -forced_host v_CPS1,v_MSG1,v_DSTORE1 -c sudo_cmd -m "ps aux|grep -i sfdc|grep -v grep" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start Splunk
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product sfdc-splunk-forwarder -host v_CPS1,v_MSG1,v_DSTORE1 -c start_server -threads -auto2
+
+- add to pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -host v_CPS1 -c add_to_pool -threads -auto2
+
+- Validate hosts are in pool and no issues with the pool
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product chatternow,chatterbox -host v_HOSTNAME_CPS -c bigipcheck -d -threads -bigipstatus AVAILABILITY_STATUS_GREEN -auto2
+
+- Verify Cluster and Host Status
+Exec: /opt/cpt/bin/synthetic_check.py -V v_VIP -H v_CPS1
+
+- Enable nagios monitoring
+Exec_with_creds: /opt/cpt/bin/nagios_monitor.py -H v_HOSTS -c enable
+
+- Update Patching data in GUS
+Exec_with_creds: /opt/cpt/update_lh.py --case v_CASE --host v_HOSTS --etime
+
+Exec: echo "Host v_CPS1,v_MSG1,v_DSTORE1 system patching completed"

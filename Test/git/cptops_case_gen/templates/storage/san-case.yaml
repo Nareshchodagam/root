@@ -1,0 +1,28 @@
+---
+  Details: ""
+  RecordTypeId: 012B000000009fB
+  Change-Type: "Minor"
+  Status: "New"
+  SRO-Resource: "No"
+  Source-Control: "SVN"
+  Implementation: "See Implementation Plan Attached"
+  Change-Area: "Storage - New Infrastructure Installs"
+  Business-Reason: "Routine Maintenance"
+  Cloud-Team: ""
+  Backout: "This is a fix forward rollback"
+  Shared-Infrastructure: "Yes"
+  Risk-Level: "Low"
+  Risk-Summary: "Steps to Mitigate Risk: This is a new pod with no live data on it."
+  Functional-System-Area: "SAN (Cisco / FCIP); Storage (Hitachi)"
+  Infrastructure-Type: "Primary and Secondary"
+  Vendor-Case-Number: ""
+  
+  Verification: | 
+    Ensure Each Host has the new storage visible on two paths:
+    $ rescandisks.sh -av to see disks are presented
+     
+    Confirm oracle filesystem has been created:
+    $ df -h /oracle
+    
+    Confirm disks are visible to ASM: 
+    $ /etc/init.d/oracleasm listdisks 

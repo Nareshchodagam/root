@@ -1,0 +1,2 @@
+- Check MNDS QUORUM, Only Applicable for MNDS hosts (This gets skipped in case of DNDS).
+release_runner.pl -invdb_mode -cluster v_CLUSTER -superpod v_SUPERPOD -product bigdata-util -threads -no_lb -no-recheck_on_fail -no_monitor -auto2 -stage runtime -nostart -c cmd -m "/opt/sfdc/python27/bin/python2.7 /home/sfdc/bigdops/gatekeeper/gatekeeper.py" -host v_HOSTS

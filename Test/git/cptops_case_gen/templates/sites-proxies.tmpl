@@ -1,0 +1,28 @@
+RecordTypeId:012B000000009fB
+Change-Type:Minor
+Status:New
+SRO-Resource:No
+Patch-Vendor:Redhat
+Patch-Desc:Upgrades to glibc
+Subject: v_SUBJECT
+Description: For SFDC Compliance, we need to patch the below hosts to address CVE-2015-0235
+Implementation:See Implementation Plan Attached
+Verification:See Verification Plan Attached
+Priority:Sev3
+Change-Area:Systems - Patch/Upgrade Redundant Systems
+Business-Justification:CVE-2015-0235 leaves our external facing infrastructure open to this bug. We need to ensure the SFDC environment is not vulnerable for security and compliance.
+Business-Reason:Routine Maintenance
+#Case-Owner:v_USERNAME
+Cloud-Team:R&D App Delivery
+Backout:This is a fix forward rollback
+Shared-Infrastructure:Yes
+Tested-Change:Yes
+Risk-Level:Low
+Risk-Summary:Test Details: Has been tested in the IST environment
+Impact-Severity:Low
+Impact-Scope:Host/Node
+Impact-Summary:Low impact due to the nature of the patch
+Functional-System-Area:Sites Proxy
+Infrastructure-Type:'Primary and Secondary'
+Test-Evidence:'Test Detail & Results Included (see Risk Summary)'
+Vendor-Case-Number:CVE-2015-0235

@@ -1,0 +1,22 @@
+- All actions take place on the release host using packaged release runner.
+Call KZ via
+
+katzmeow.pl --case v_CASENUM --impl
+
+
+v_CLUSTER
+
+- set your DC env
+Exec: DC=v_DATACENTER
+
+
+- create a local remote_transfer directory
+
+Exec: mkdir -p ~/releaserunner/remote_transfer
+
+- the get the update script:
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/dcc/update_glibc.sh ~/releaserunner/remote_transfer/update_glibc.sh
+
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/nagios_monitor.py ~/nagios_monitor.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/check_reconnect.py ~/check_reconnect.py
+Exec: svn export svn://vc-v_DATACENTER/subversion/tools/automation/scripts/opseng/computedeploy/patching/bin/verify_hosts.py ~/verify_hosts.py

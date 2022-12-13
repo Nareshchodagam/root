@@ -1,0 +1,1 @@
+release_runner.pl -invdb_mode -superpod v_SUPERPOD -cluster v_CLUSTER -product v_PRODUCT_RRCMD -host v_HOSTS -c start_server v_DRNOSTART_RRCMD_-threads -auto2

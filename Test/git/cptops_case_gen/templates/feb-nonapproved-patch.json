@@ -1,0 +1,48 @@
+{
+	"Details":
+	{
+	"RecordTypeId": "012B000000009fB",
+	"Change-Type": "Minor",
+	"Status": "New",
+	"SRO-Resource": "No",
+	"Patch-Vendor": "Redhat",
+	"Patch-Desc": "Upgrades OS to Febuary Patch Bundle",
+	"Subject": "v_SUBJECT",
+	"Description": "For SFDC Compliance, we need to upgrade the below hosts",
+	"Implementation": "See Implementation Plan Attached",
+	"Verification": "", 
+	"Priority": "Sev3",
+	"Change-Area": "Systems - Patch/Upgrade Redundant Systems",
+	"Business-Justification": "Hosts need to updated to the latest revision for compliance and security reasons",
+	"Business-Reason": "Routine Maintenance",
+	"Cloud-Team": "a3mB000000000BhIAI",
+	"Backout": "This is a fix forward rollback",
+	"Shared-Infrastructure": "Yes",
+	"Tested-Change": "Yes",
+	"Risk-Level": "Low",
+	"Risk-Summary:Test Details": "Has been tested in the IST environment",
+	"Impact-Severity": "Low",
+	"Impact-Scope": "Host/Node",
+	"Impact-Summary": "Low impact due to validations within ORB framework",
+	"Functional-System-Area": "Servers",
+	"Infrastructure-Type": "Supporting Infrastructure",
+	"Test-Evidence": "'Test Detail & Results Included (see Risk Summary)'",
+	"Vendor-Case-Number": ""
+	},
+	"Verif": [ "Ensure Host has been rebooted and its uptime is less then 300: ",
+				" ", 
+				"$ cat /proc/uptime | awk '{print $1}'",
+				" ",
+				"Confirm /etc/redhat-release is updated:", 
+				" ", 
+				"$ grep 6.7 /etc/redhat-release", 
+				" ", 
+				"Validate kernel version:", 
+				" ", 
+				"$ uname -a | grep 2.6.32-573.12.1.el6.x86_64",
+				" ",
+				"All checks will be included in the validation code ",
+				"validate_linux_patchset.py"
+				
+				]
+}

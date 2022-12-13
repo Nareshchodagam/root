@@ -1,0 +1,73 @@
+
+
+
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Check for artifact errors
+Exec: yum clean all;yum repolist|grep -i error;echo $? |grep 1
+
+- Performing racreset on the hosts
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "ipmitool mc reset cold" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Setting permission on the script.
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "if [ -f /home/logsearch_1/madeira/service_all.sh ]; then chmod +x /home/logsearch_1/madeira/service_all.sh ; fi"  -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Stop Maderia App.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - logsearch_1 -c 'if [ -f /home/logsearch_1/madeira/service_all.sh ]; then bash /home/logsearch_1/madeira/service_all.sh stop; fi'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Stop the running application
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - logsearch_1 -c './service stop'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Taking required backups
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar --exclude=/home/logsearch_1/installed -cvzpf /logsearch/prod/logsearch_home.tar.gz /home/logsearch_1|| [[ \$? -eq 1 ]]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -cvzpf /logsearch/prod/splunk_certs.tar.gz /etc/splunk|| [[ \$? -eq 1 ]]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "rm -rf /home/logsearch_1/service" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Set the iDB status of the hosts to IN_MAINTENANCE
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do inventory-action.pl -use_krb_auth -action update  -resource host -name $host -updateFields "operationalStatus=IN_MAINTENANCE";done>> ~/v_CASE_idb_log.txt
+
+- Begin Migration block
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do serial=$(inventory-action.pl -use_krb_auth -action read  -resource host -name $host |grep -i serialNumber|cut -d'"' -f4);clname=$(inventory-action.pl -use_krb_auth -action read  -resource host -name $host -fields cluster.name -q | grep name |cut -d'"' -f4);echo "/usr/lib/gigantor/bin/caspr_host_reimage.sh -c  $clname  -d v_ROLE  -h $host -i admin  -o CentOS -v 7 -n $serial -s v_SUPERPOD -m ops-monitor-v_DATACENTER.ops.sfdc.net"; done >> ~/v_CASE_commands_BLOCKv_NUM
+
+Manual: Reimage through Caspr
+
+- Refresh kerberos ticket
+Exec_with_creds: /usr/local/bin/ambari-manage/interactive-kinit.py
+
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do inventory-action.pl -use_krb_auth -action update  -resource host -name $host -updateFields "operationalStatus=ACTIVE";done>> ~/v_CASE_idb_log.txt
+
+
+- NTP  start
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpd" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Validate that the hosts have been patched and are running the correct version
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "./remote_transfer/validate_patchset.py --bundle v_BUNDLE" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Restore the backups
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -xpzvf /logsearch/prod/splunk_certs.tar.gz -C / " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -xpzvf /logsearch/prod/logsearch_home.tar.gz -C / " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "chmod  755 /etc/splunk" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "chown root:root /etc/splunk" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start the application
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - logsearch_1 -c './service start'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Start Maderia App.
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - logsearch_1 -c 'if [ -f /home/logsearch_1/madeira/service_all.sh ]; then bash /home/logsearch_1/madeira/service_all.sh start; fi'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y
+
+Exec: echo "Host v_HOSTS system patching completed"

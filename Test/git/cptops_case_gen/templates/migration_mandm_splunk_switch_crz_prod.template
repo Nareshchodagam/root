@@ -1,0 +1,68 @@
+
+
+
+
+-Copy remote scripts to the target hosts
+release_runner.pl -forced_host v_HOSTS -force_update_bootstrap -c sudo_cmd -m "ls" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a enable -H v_HOSTS
+
+- Performing racreset on the hosts
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "ipmitool mc reset cold" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Stop the running application
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - logsearch_1 -c './service stop'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Taking required backups
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar --exclude=/home/logsearch_1/installed -cvzpf /logsearch/logsearch1_home.tar.gz /home/logsearch_1 || [[ \$? -eq 1 ]]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -cvzpf /logsearch/logsearch2_home.tar.gz /home/logsearch_2|| [[ \$? -eq 1 ]]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -cvzpf /logsearch/splunk_certs.tar.gz /etc/splunk|| [[ \$? -eq 1 ]]" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "grep \`readlink -f /logsearch\` /etc/fstab ; if [ \$? -ne 0 ]; then printf 'tar -cvzhpf /data/logsearch.tar.gz /logsearch || [[ \$? -eq 1 ]] '> ~/logsearch_backup.sh ;else echo ':'> logsearch_backup.sh; fi ;chmod +x logsearch_backup.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "bash ~/logsearch_backup.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Set the iDB status of the hosts to IN_MAINTENANCE
+
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do inventory-action.pl -use_krb_auth -action update  -resource host -name $host -updateFields "operationalStatus=IN_MAINTENANCE";done>> ~/v_CASE_idb_log.txt
+
+- Begin Migration block
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do serial=$(inventory-action.pl -use_krb_auth -action read  -resource host -name $host |grep -i serialNumber|cut -d'"' -f4);echo "/usr/lib/gigantor/bin/caspr_host_reimage.sh -c  v_CLUSTER  -d v_ROLE  -h $host -i admin  -o CentOS -v 7 -n $serial -s v_SUPERPOD -m ops-monitor-v_DATACENTER.ops.sfdc.net"; done  >> ~/v_CASE_commands_BLOCKv_NUM
+
+Manual: Reimage through Caspr
+
+Exec: for host in $(cat ~/v_CASE_include| tr "," " ");do inventory-action.pl -use_krb_auth -action update  -resource host -name $host -updateFields "operationalStatus=ACTIVE";done>> ~/v_CASE_idb_log.txt
+
+
+- NTP  start
+release_runner.pl  -forced_host v_HOSTS -c sudo_cmd -m "systemctl start ntpd" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Restore the backups
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "grep \`readlink -f /logsearch\` /etc/fstab ; if [ \$? -ne 0 ]; then printf 'tar -xvzhpf /data/logsearch.tar.gz -C / ' > ~/logsearch_restore.sh ;else echo ':'> logsearch_restore.sh; fi ;chmod +x logsearch_restore.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "bash ~/logsearch_restore.sh" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -xpzhvf /logsearch/splunk_certs.tar.gz -C / " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -xpzhvf /logsearch/logsearch1_home.tar.gz -C / " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "tar -xpzhvf /logsearch/logsearch2_home.tar.gz -C / " -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "chmod  755 /etc/splunk" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "chown root:root /etc/splunk" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+
+- Start the application
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - logsearch_1 -c './service start'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Verify app status
+release_runner.pl -forced_host v_HOSTS -c sudo_cmd -m "su - logsearch_1 -c './service status'" -threads -auto2 -property "sudo_cmd_line_trunk_fix=1"
+
+- Disable GOC++ alerts ("enable" alert suppression)
+Exec_with_creds: /opt/cpt/cptops_logicalhost_alerts.py -a disable -H v_HOSTS
+
+- Auto pause case if case status is not equal to In Progres.
+Exec_with_creds: /opt/cpt/gus_case_mngr.py -c v_CASE --pause -y
+
+Exec: echo "Host v_HOSTS system patching completed"
+

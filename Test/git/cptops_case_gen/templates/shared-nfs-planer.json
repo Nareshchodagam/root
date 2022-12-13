@@ -1,0 +1,11 @@
+{
+	"DCs": "chi",
+	"Details":
+	{
+		"SM_Infrastructure_Type__c": "Supporting Infrastructure" 
+	},
+	"Implementation_Steps": [ 
+								"Please see attached implementation plan",
+								"Verification for patch set install is conducted via code in the plan."
+							]
+ }

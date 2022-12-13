@@ -1,0 +1,20 @@
+---
+Storage Allocation: |
+  Storage Allocation
+  0. Configure the Array as per standard procedures ( https://docs.google.com/spreadsheets/d/1zlp6ohnStacKkglcMk-iklLLTq5UEqvZnOTonPwM3h4/edit#gid=2018044813 )
+  1. Using the addfile and initfile run emcalloc.pl/hdsallocrcom.pl to create the mapping, clone and replication scripts
+  2. Scan and configure the database servers :# sudo rescandisks.sh -av
+  3. Create the /oracle filesystem
+  4. Add the remaining luns to ASM
+  
+  Repeat steps 1-4 on the Dataguard servers.
+
+Switch Configuration: |
+  Switch Configuration
+  For the DB and DGDB Servers:
+  1. Label and Online the Switch Ports as per the Patch Plan
+  2. Update the device-alias database for the new nodes
+  3. Create the DB and DGUARD VSANs for the new POD
+  4. Create the new zones and add them to a new zoneset
+  5. Add the Host and Array Ports to the new VSANs
+  6. Confirm the zone members are active in the zoneset
